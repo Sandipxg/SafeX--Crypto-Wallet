@@ -8,10 +8,9 @@ By the final phase, the app is a complete, self-custody-wallet + custodial-excha
 > custody/ledger architecture — going live with real user funds would need licensing, audits, and legal review
 > far beyond what's tracked here.
 
-> **Chain scope:** EVM + Bitcoin are primary through Phase 9. Solana + Tron are deferred to Phase 4.5 so multi-chain
-> breadth doesn't stall the first working vertical slice.
+> **Chain scope:** EVM + Bitcoin are the core scope through Phase 12. Solana + Tron are deferred to Phase 13 (optional stretch phase) at the end of the roadmap.
 
-> **Stack:** Backend — Node.js + TypeScript + oRPC + PostgreSQL (Orchid/Drizzle) + Redis + Kafka.
+> **Stack:** Backend — Node.js + TypeScript + oRPC + PostgreSQL (Orchid/Drizzle) + Redis (Phase 6+) + Kafka (Phase 8+).
 > Frontend — Next.js (App Router) + TypeScript + Tailwind + shadcn/ui, talking to the backend over the oRPC client
 > + WebSockets for live data. Every phase's UI is a real page in this same app, not a demo/prototype.
 
@@ -29,7 +28,6 @@ Each phase ends with a **Definition of Done** — something you can open in a br
 - [ ] Node.js + TypeScript workspace configuration & tsconfig strict mode
 - [ ] PostgreSQL + ORM schema design & migration workflows
 - [ ] oRPC server setup & type inference mechanics (shared types between frontend/backend)
-- [ ] Redis client setup & connection pooling
 - [ ] Docker Compose orchestration for local dev services
 - [ ] Testing fundamentals (Vitest/Jest)
 - [ ] Environment/secrets management conventions
@@ -38,7 +36,7 @@ Each phase ends with a **Definition of Done** — something you can open in a br
 ## Build — Backend
 
 - [ ] Initialize TypeScript workspace & build scripts
-- [ ] Docker Compose for PostgreSQL, Redis, Kafka
+- [ ] Docker Compose for PostgreSQL
 - [ ] ORM connected to PostgreSQL + initial health migration
 - [ ] oRPC server with a healthcheck router
 - [ ] Vitest/Jest configured with one passing test
@@ -193,29 +191,7 @@ Same test as Phase 3, but on Bitcoin testnet, using the same Send/Receive UI wit
 
 Send a testnet ERC20 token (e.g. testnet USDC) to your wallet, see it appear automatically in the Assets tab, and send it back out through the same Send screen used for ETH.
 
----
 
-# 🔀 Phase 4.5: Multi-Chain Expansion (Solana & Tron)
-
-_Deferred until the EVM+Bitcoin wallet above is fully working end-to-end._
-
-## Learn
-
-- [ ] Solana Accounts model & Program Derived Addresses (PDAs)
-- [ ] Tron Resource Model (Energy & Bandwidth)
-
-## Build — Backend
-
-- [ ] Solana address derivation + SPL token transfer module
-- [ ] Tron address derivation + TRX/TRC20 transfer + resource estimator
-
-## Build — Frontend
-
-- [ ] Add Solana and Tron to the existing chain selector — Addresses, Send, Receive, Assets, History all extend automatically
-
-## ✅ Definition of Done
-
-The same wallet UI now supports 4 chains end-to-end (EVM, Bitcoin, Solana, Tron) through the chain selector, with no chain-specific screens.
 
 ---
 
@@ -243,7 +219,7 @@ Your own written test exploits a real vulnerability in a local contract, then fa
 
 # 🚜 Phase 6: Custodial Deposits & Exchange Balance
 
-_This is where the app splits into two coexisting halves: the self-custody **Wallet** (Phases 1–4.5, user controls
+_This is where the app splits into two coexisting halves: the self-custody **Wallet** (Phases 1–4, user controls
 keys) and the custodial **Exchange** (this phase onward, SafeX holds funds and tracks balances internally). Both
 live in the same app under different nav sections._
 
@@ -452,6 +428,30 @@ A new account is withdrawal-limited until KYC is submitted and approved through 
 ## ✅ Definition of Done
 
 A simulated leveraged position breaches its maintenance margin and the liquidation worker closes it automatically; the UI reflects the closed position and updated balance without manual intervention.
+
+---
+
+# 🔀 Phase 13: Multi-Chain Expansion — Solana & Tron (Optional Stretch Goal)
+
+_Deferred until the primary EVM+Bitcoin wallet and exchange features (Phases 1–12) are fully working end-to-end._
+
+## Learn
+
+- [ ] Solana Accounts model & Program Derived Addresses (PDAs)
+- [ ] Tron Resource Model (Energy & Bandwidth)
+
+## Build — Backend
+
+- [ ] Solana address derivation + SPL token transfer module
+- [ ] Tron address derivation + TRX/TRC20 transfer + resource estimator
+
+## Build — Frontend
+
+- [ ] Add Solana and Tron to the existing chain selector — Addresses, Send, Receive, Assets, History all extend automatically
+
+## ✅ Definition of Done
+
+The wallet UI supports 4 chains end-to-end (EVM, Bitcoin, Solana, Tron) through the chain selector, with no chain-specific screens.
 
 ---
 

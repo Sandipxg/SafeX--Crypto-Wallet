@@ -12,9 +12,9 @@ This document details the selected technical stack, core libraries, and architec
 | **Type-Safe API** | `oRPC` (Client & Server) | End-to-end type-safe RPC communication between client and server |
 | **Backend Service** | `Node.js` + `TypeScript` | Business logic, authentication, wallet APIs, and service layer |
 | **Database & ORM** | `PostgreSQL` + `Orchid ORM` | ACID transaction storage for users, balances, and double-entry ledger |
-| **Caching & Pub/Sub** | `Redis` | High-speed ticker pub/sub, rate limiting, and session cache |
-| **Job Queues** | `BullMQ` (Redis-backed) | Async deposit sweeping, gas refueling, and withdrawal execution jobs |
-| **Event Streaming** | `Apache Kafka` | Real-time event sourcing for order matching and audit logs |
+| **Caching & Pub/Sub** | `Redis` (Phase 6+) | High-speed ticker pub/sub, rate limiting, and session cache |
+| **Job Queues** | `BullMQ` (Redis-backed, Phase 6+) | Async deposit sweeping, gas refueling, and withdrawal execution jobs |
+| **Event Streaming** | `Apache Kafka` (Phase 8+) | Real-time event sourcing for order matching and audit logs |
 | **Crypto Primitives** | `viem` / `@noble/secp256k1` / `bip39` / `bip32` / `Web Crypto API` | Native key derivation, cryptographic signatures, and RPC transport |
 
 ---
@@ -42,9 +42,9 @@ This document details the selected technical stack, core libraries, and architec
   - Map numbers to native JavaScript `BigInt` or `bignumber.js` to eliminate floating-point rounding errors.
 
 ### 2.4 Cache, Messaging & Async Workers
-* **Redis**: Session storage, API rate limiting, and pub/sub channels.
-* **BullMQ**: Asynchronous background queues for deposit sweeping, auto-refueling gas tanks, and withdrawal retries.
-* **Kafka**: Distributed event streaming for order match logs, trade settlement, and audit trails.
+* **Redis** (Phase 6+): Session storage, API rate limiting, and pub/sub channels.
+* **BullMQ** (Phase 6+): Asynchronous background queues for deposit sweeping, auto-refueling gas tanks, and withdrawal retries.
+* **Kafka** (Phase 8+): Distributed event streaming for order match logs, trade settlement, and audit trails.
 
 ### 2.5 Crypto & Security Libraries
 * **EVM & Smart Contracts**: `viem` (Type-safe EVM library)

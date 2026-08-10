@@ -128,7 +128,7 @@
 
 ### 2.4 Derivation Paths (BIP44)
 * BIP44 Multi-Account Hierarchy (`m / purpose' / coin_type' / account' / change / address_index`)
-* Coin Types (BTC, ETH, SOL, TRX, etc.)
+* Coin Types (BTC, ETH — Primary; SOL, TRX — Optional Phase 13)
 * Account & Change Indexes
 * Address Indexing Strategy
 
@@ -207,11 +207,10 @@
 * Front-Running & Sandwich Attacks
 * Flash Loans & Oracle Manipulation
 
-### 4.4 Multi-Chain Paradigms
-* **Bitcoin**: UTXO, Bitcoin Script, SegWit, Taproot
-* **Solana**: Account Model, Programs (Smart Contracts), PDAs (Program Derived Addresses)
-* **Tron**: Resource Model (Energy & Bandwidth)
-* **Polygon**: PoS Checkpoints & Validators
+### 4.4 Supported Blockchain Paradigms
+* **Bitcoin**: UTXO Model, Bitcoin Script, SegWit, Taproot
+* **Ethereum (EVM)**: Account Model, Nonces, EVM Bytecode, Gas & EIP-1559
+* **Optional Multi-Chain Stretch (Phase 13)**: Solana (Accounts & PDAs), Tron (Resource Model), Polygon (PoS Checkpoints)
 
 ---
 
