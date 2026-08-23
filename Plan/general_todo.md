@@ -22,30 +22,30 @@ Each phase ends with a **Definition of Done** — something you can open in a br
 
 ## Learn
 
-- [ ] Number Systems (Binary, Hexadecimal, Base58, Base64)
-- [ ] Data Representation (Bits, Bytes, Endianness, UTF-8, Unicode)
-- [ ] HTTP/S, WebSockets, TLS basics
-- [ ] Node.js + TypeScript workspace configuration & tsconfig strict mode
-- [ ] PostgreSQL + ORM schema design & migration workflows
-- [ ] oRPC server setup & type inference mechanics (shared types between frontend/backend)
-- [ ] Docker Compose orchestration for local dev services
-- [ ] Testing fundamentals (Vitest/Jest)
-- [ ] Environment/secrets management conventions
-- [ ] Next.js App Router basics, Tailwind, shadcn/ui component conventions
+- [x] Number Systems (Binary, Hexadecimal, Base58, Base64)
+- [x] Data Representation (Bits, Bytes, Endianness, UTF-8, Unicode)
+- [x] HTTP/S, WebSockets, TLS basics
+- [x] Node.js + TypeScript workspace configuration & tsconfig strict mode
+- [x] PostgreSQL + ORM schema design & migration workflows
+- [x] oRPC server setup & type inference mechanics (shared types between frontend/backend)
+- [x] Docker Compose orchestration for local dev services
+- [x] Testing fundamentals (Vitest/Jest)
+- [x] Environment/secrets management conventions
+- [x] Next.js App Router basics, Tailwind, shadcn/ui component conventions
 
 ## Build — Backend
 
-- [ ] Initialize TypeScript workspace & build scripts
-- [ ] Docker Compose for PostgreSQL
-- [ ] ORM connected to PostgreSQL + initial health migration
-- [ ] oRPC server with a healthcheck router
-- [ ] Vitest/Jest configured with one passing test
+- [x] Initialize TypeScript workspace & build scripts
+- [x] Docker Compose for PostgreSQL
+- [x] ORM connected to PostgreSQL + initial health migration
+- [x] oRPC server with a healthcheck router
+- [x] Vitest/Jest configured with one passing test
 
 ## Build — Frontend
 
-- [ ] Next.js app scaffolded, connected to oRPC client
-- [ ] App shell: nav bar, layout, dark/light theme, empty dashboard route
-- [ ] `/status` page rendering live backend healthcheck (proves frontend ↔ backend ↔ DB are wired)
+- [x] Next.js app scaffolded, connected to oRPC client
+- [x] App shell: nav bar, layout, dark/light theme, empty dashboard route
+- [x] `/status` page rendering live backend healthcheck (proves frontend ↔ backend ↔ DB are wired)
 
 ## ✅ Definition of Done
 
@@ -85,6 +85,7 @@ Open the app in a browser, see a styled shell with a working nav, and a status p
 In the browser: create a new wallet, back up the seed phrase, log out, log back in using only that seed phrase, and land on an authenticated dashboard. No plaintext seed ever touches the database.
 
 ---
+
 
 # 🧬 Phase 2: HD Multi-Address Wallet
 
