@@ -57,13 +57,13 @@ Open the app in a browser, see a styled shell with a working nav, and a status p
 
 ## Learn
 
-- [ ] CSPRNG & Entropy collection (`node:crypto` / Web Crypto API)
-- [ ] Encoding Schemes (Hex, Base64, Base58, Base58Check, Bech32)
-- [ ] Hash functions (SHA-256, Keccak-256)
-- [ ] Symmetric Encryption (AES-256-GCM, IV/Nonces)
-- [ ] Password/Secret Hashing (PBKDF2, scrypt, Argon2, Salt)
-- [ ] BIP39 Mnemonic specification & checksum calculation from entropy
-- [ ] Session strategy: JWT vs signed cookies for a "prove you hold the seed" login model
+- [x] CSPRNG & Entropy collection (`node:crypto` / Web Crypto API)
+- [x] Encoding Schemes (Hex, Base64, Base58, Base58Check, Bech32)
+- [x] Hash functions (SHA-256, Keccak-256)
+- [x] Symmetric Encryption (AES-256-GCM, IV/Nonces)
+- [x] Password/Secret Hashing (PBKDF2, scrypt, Argon2, Salt)
+- [x] BIP39 Mnemonic specification & checksum calculation from entropy
+- [x] Session strategy: JWT vs signed cookies for a "prove you hold the seed" login model
 
 ## Build — Backend
 
