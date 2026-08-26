@@ -582,3 +582,101 @@ $$\text{Master Seed} = \text{PBKDF2-HMAC-SHA512}(\text{Password} = \text{Mnemoni
 - [x] Checksum ($CS = ENT/32$ bits) is appended to entropy before 11-bit slicing.
 - [x] Checksum validation catches typos and invalid word ordering on wallet import.
 - [x] PBKDF2-HMAC-SHA512 (2,048 rounds) derives 512-bit master seed from mnemonic + optional passphrase.
+
+---
+
+## Topic 8: SafeX User Execution Flows (Sequence Diagrams)
+
+### Flow A: "Create New Wallet" User Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant UI as Create Page (/onboarding/create)
+    participant BIP as bip39.ts
+    participant ENT as entropy.ts
+    participant VLT as vault.ts
+    participant KDF as kdf.ts
+    participant AES as aes.ts
+    participant DB as storage.ts (IndexedDB)
+    participant MEM as memory.ts
+    participant SVR as auth.router.ts (Backend)
+    participant STO as useVaultStore.ts (Zustand)
+
+    User->>UI: Selects 12 or 24 words
+    UI->>BIP: generateMnemonic(128 or 256)
+    BIP->>ENT: generateEntropy(16 or 32 bytes)
+    ENT-->>BIP: CSPRNG Random Bytes
+    BIP-->>UI: Returns 12-Word Seed Phrase String
+
+    User->>UI: Reviews Seed Phrase & Completes 3-Word Verification Check
+    User->>UI: Enters New Password & Clicks "Create Wallet"
+
+    UI->>VLT: createAndSaveVault(password, mnemonic)
+    VLT->>BIP: validateMnemonic(mnemonic)
+    VLT->>ENT: generateEntropy(16) [Salt] & generateEntropy(12) [IV]
+    VLT->>KDF: deriveKeyArgon2id(password, salt)
+    KDF-->>VLT: Returns 32-Byte Key
+    VLT->>AES: encryptAESGCM(seedBytes, key, iv)
+    AES-->>VLT: Returns { iv, authTag, ciphertext }
+    VLT->>DB: saveVaultRecord(record) [IndexedDB]
+    VLT->>BIP: deriveWalletIdentity(mnemonic)
+    BIP-->>VLT: Returns { address: 0x..., publicKey }
+    VLT->>MEM: zeroizeBuffer(derivedKey) [RAM Cleanup]
+    VLT-->>UI: Returns { address, publicKey }
+
+    UI->>SVR: authRouter.registerWallet({ walletAddress, publicKey })
+    SVR-->>UI: Sets HttpOnly Access/Refresh JWT Cookies
+
+    UI->>STO: setSessionCredentials(address, publicKey, mnemonic)
+    STO-->>UI: Sets vaultState = 'UNLOCKED' & Starts 10m Auto-Lock Timer
+    UI->>User: Redirects to /dashboard
+```
+
+---
+
+### Flow B: "Import Existing Wallet" User Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant UI as Import Page (/onboarding/import)
+    participant BIP as bip39.ts
+    participant ENT as entropy.ts
+    participant VLT as vault.ts
+    participant KDF as kdf.ts
+    participant AES as aes.ts
+    participant DB as storage.ts (IndexedDB)
+    participant MEM as memory.ts
+    participant SVR as auth.router.ts (Backend)
+    participant STO as useVaultStore.ts (Zustand)
+
+    User->>UI: Types or Pastes 12/24 Seed Words
+    UI->>BIP: validateMnemonic(phrase) [Live Check]
+    BIP->>BIP: normalizeMnemonic(phrase) [trim, lowercase, NFKD]
+    BIP-->>UI: Returns true (or false if checksum fails)
+
+    User->>UI: Enters Password & Clicks "Import Wallet"
+
+    UI->>VLT: createAndSaveVault(password, normalizedPhrase)
+    VLT->>ENT: generateEntropy(16) [Salt] & generateEntropy(12) [IV]
+    VLT->>KDF: deriveKeyArgon2id(password, salt)
+    KDF-->>VLT: Returns 32-Byte Key
+    VLT->>AES: encryptAESGCM(seedBytes, key, iv)
+    AES-->>VLT: Returns { iv, authTag, ciphertext }
+    VLT->>DB: saveVaultRecord(record) [IndexedDB]
+    VLT->>BIP: deriveWalletIdentity(normalizedPhrase)
+    BIP-->>VLT: Returns existing EVM { address: 0x..., publicKey }
+    VLT->>MEM: zeroizeBuffer(derivedKey) [RAM Cleanup]
+    VLT-->>UI: Returns { address, publicKey }
+
+    UI->>SVR: authRouter.registerWallet({ walletAddress, publicKey })
+    SVR-->>UI: Sets HttpOnly Access/Refresh JWT Cookies
+
+    UI->>STO: setSessionCredentials(address, publicKey, normalizedPhrase)
+    STO-->>UI: Sets vaultState = 'UNLOCKED' & Starts 10m Auto-Lock Timer
+    UI->>User: Redirects to /dashboard
+```
+

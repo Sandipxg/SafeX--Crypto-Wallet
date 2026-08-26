@@ -67,18 +67,18 @@ Open the app in a browser, see a styled shell with a working nav, and a status p
 
 ## Build — Backend
 
-- [ ] Entropy/randomness utility module (+ tests)
-- [ ] BIP39 mnemonic generator & validator (+ tests against official test vectors)
-- [ ] Encrypted-vault module: derive an encryption key from the mnemonic (or a user passphrase) and store only the encrypted seed, never plaintext
-- [ ] Auth endpoints: `createAccount` (generate mnemonic, return it once), `login` (accept mnemonic, derive + verify, issue session)
-- [ ] Session/JWT middleware guarding authenticated oRPC routes
+- [x] Entropy/randomness utility module (+ tests)
+- [x] BIP39 mnemonic generator & validator (+ tests against official test vectors)
+- [x] Encrypted-vault module: derive an encryption key from the mnemonic (or a user passphrase) and store only the encrypted seed, never plaintext
+- [x] Auth endpoints: `registerWallet`, `loginWallet`, `getMe`, `logout` issuing session cookies
+- [x] Session/JWT middleware guarding authenticated oRPC routes
 
 ## Build — Frontend
 
-- [ ] **Onboarding: Create Wallet** — generate mnemonic screen, "write it down" warning, confirm-by-reselecting-words step, done screen
-- [ ] **Onboarding: Import/Login** — 12/24-word input grid, validation feedback, submit → session
-- [ ] Auth-guarded dashboard shell (redirects to login if no session)
-- [ ] Basic account settings page (logout, "reveal seed phrase" behind a confirmation)
+- [x] **Onboarding: Create Wallet** — generate mnemonic screen, "write it down" warning, confirm-by-reselecting-words step, done screen
+- [x] **Onboarding: Import/Login** — 12/24-word input grid, validation feedback, submit → session
+- [x] Auth-guarded dashboard shell (redirects to login if no session)
+- [x] Basic account settings page (logout, "reveal seed phrase" behind a 30s auto-hide confirmation)
 
 ## ✅ Definition of Done
 
