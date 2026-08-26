@@ -1,5 +1,6 @@
 import { orchidORM } from 'orchid-orm/node-postgres'
 import { config } from '../config/env.js'
+import { UserTable } from './tables/user.table.js'
 
 export const db = orchidORM(
   {
@@ -7,5 +8,7 @@ export const db = orchidORM(
     max: 10,
     idleTimeoutMillis: 30000
   },
-  {}
+  {
+    users: UserTable
+  }
 )
