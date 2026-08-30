@@ -106,7 +106,7 @@ export default function CreateWalletPage() {
       const identity = await createAndSaveVault(password, mnemonic)
 
       // 2. Set active Zustand RAM session state
-      setSessionCredentials(identity.address, identity.publicKey, mnemonic)
+      setSessionCredentials(identity.address, identity.btcAddress, identity.publicKey, mnemonic)
 
       // 3. Redirect to dashboard
       router.push('/dashboard')

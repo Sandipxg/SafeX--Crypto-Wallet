@@ -4,12 +4,13 @@ import { encryptAESGCM, decryptAESGCM } from './aes'
 import { saveVaultRecord, loadVaultRecord, deleteVaultRecord } from './storage'
 import { VaultRecord } from './types'
 import { normalizeMnemonic, validateMnemonic, deriveWalletIdentity } from './bip39'
+import { deriveBtcIdentity } from './btc'
 import { InvalidMnemonicError, InvalidPasswordError } from './errors'
 import { zeroizeBuffer } from './memory'
 
 /**
  * ============================================================================
- * 1. createAndSaveVault(password, mnemonic): Promise<{ address, publicKey }>
+ * 1. createAndSaveVault(password, mnemonic): Promise<{ address, btcAddress, publicKey }>
  * ============================================================================
  * @description Master onboarding pipeline:
  *              1. Validates mnemonic phrase via bip39.ts.
@@ -17,7 +18,7 @@ import { zeroizeBuffer } from './memory'
  *              3. Derives 256-bit AES key from password via Argon2id (kdf.ts).
  *              4. Encrypts mnemonic via AES-256-GCM (aes.ts).
  *              5. Saves VaultRecord ({ salt, iv, authTag, ciphertext }) to IndexedDB (storage.ts).
- *              6. Derives primary EVM address (bip39.ts).
+ *              6. Derives primary EVM address (bip39.ts) & Bitcoin address (btc.ts).
  *              7. Zeroizes secret key buffers from RAM (memory.ts).
  *
  * @where_used  onboarding/create/page.tsx & onboarding/import/page.tsx
@@ -27,7 +28,7 @@ import { zeroizeBuffer } from './memory'
 export async function createAndSaveVault(
   password: string,
   mnemonic: string
-): Promise<{ address: `0x${string}`; publicKey: `0x${string}` }> {
+): Promise<{ address: `0x${string}`; btcAddress: string; publicKey: `0x${string}` }> {
   const normalizedMnemonic = normalizeMnemonic(mnemonic)
   if (!validateMnemonic(normalizedMnemonic)) {
     throw new InvalidMnemonicError('Cannot create vault with invalid mnemonic.')
@@ -62,7 +63,13 @@ export async function createAndSaveVault(
     await saveVaultRecord(record)
 
     const walletIdentity = deriveWalletIdentity(normalizedMnemonic)
-    return walletIdentity
+    const { btcAddress } = deriveBtcIdentity(normalizedMnemonic)
+
+    return {
+      address: walletIdentity.address,
+      btcAddress,
+      publicKey: walletIdentity.publicKey,
+    }
   } finally {
     zeroizeBuffer(derivedKey)
     zeroizeBuffer(plaintext)
@@ -71,23 +78,22 @@ export async function createAndSaveVault(
 
 /**
  * ============================================================================
- * 2. unlockVault(password): Promise<{ mnemonic, address, publicKey }>
+ * 2. unlockVault(password): Promise<{ mnemonic, address, btcAddress, publicKey }>
  * ============================================================================
  * @description Master vault unlocking pipeline:
  *              1. Loads stored VaultRecord from IndexedDB (storage.ts).
  *              2. Re-derives Argon2id AES key from password + stored salt (kdf.ts).
  *              3. Decrypts payload & verifies GCM Auth Tag (aes.ts).
  *                 Throws InvalidPasswordError if password wrong or file tampered.
- *              4. Derives EVM address & returns decrypted mnemonic string.
+ *              4. Derives EVM address & BTC address & returns decrypted mnemonic string.
  *              5. Zeroizes derived key buffer from RAM (memory.ts).
  *
  * @where_used  Unlock screen & settings/page.tsx (Reveal Seed modal)
- *
  * @when_used   Whenever the user unlocks their wallet with their password.
  */
 export async function unlockVault(
   password: string
-): Promise<{ mnemonic: string; address: `0x${string}`; publicKey: `0x${string}` }> {
+): Promise<{ mnemonic: string; address: `0x${string}`; btcAddress: string; publicKey: `0x${string}` }> {
   const record = await loadVaultRecord()
   if (!record) {
     throw new InvalidPasswordError('No vault found in storage.')
@@ -112,10 +118,12 @@ export async function unlockVault(
 
     const mnemonic = new TextDecoder().decode(decryptedBytes)
     const walletIdentity = deriveWalletIdentity(mnemonic)
+    const { btcAddress } = deriveBtcIdentity(mnemonic)
 
     return {
       mnemonic,
       address: walletIdentity.address,
+      btcAddress,
       publicKey: walletIdentity.publicKey,
     }
   } finally {

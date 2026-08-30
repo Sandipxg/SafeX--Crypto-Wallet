@@ -10,6 +10,7 @@ export default function DashboardPage() {
     vaultState,
     hasVaultInStorage,
     activeAddress,
+    activeBtcAddress,
     checkVaultExists,
     unlock,
     lock,
@@ -19,7 +20,8 @@ export default function DashboardPage() {
   const [passwordInput, setPasswordInput] = useState('')
   const [unlockError, setUnlockError] = useState<string | null>(null)
   const [isUnlocking, setIsUnlocking] = useState(false)
-  const [copied, setCopied] = useState(false)
+  const [copiedEvm, setCopiedEvm] = useState(false)
+  const [copiedBtc, setCopiedBtc] = useState(false)
 
   useEffect(() => {
     checkVaultExists()
@@ -39,15 +41,23 @@ export default function DashboardPage() {
     }
   }
 
-  const handleCopyAddress = () => {
+  const handleCopyEvmAddress = () => {
     if (activeAddress) {
       navigator.clipboard.writeText(activeAddress)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      setCopiedEvm(true)
+      setTimeout(() => setCopiedEvm(false), 2000)
     }
   }
 
-  if (!hasVaultInStorage && !activeAddress) {
+  const handleCopyBtcAddress = () => {
+    if (activeBtcAddress) {
+      navigator.clipboard.writeText(activeBtcAddress)
+      setCopiedBtc(true)
+      setTimeout(() => setCopiedBtc(false), 2000)
+    }
+  }
+
+  if (!hasVaultInStorage && !activeAddress && !activeBtcAddress) {
     return (
       <div className="max-w-xl mx-auto py-16 text-center space-y-6">
         <div className="p-4 rounded-full bg-brand-500/10 text-brand-400 w-fit mx-auto border border-brand-500/20">
@@ -118,24 +128,49 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Account Info Card */}
+      {/* Account Info Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 p-6 rounded-2xl bg-dark-card border border-dark-border space-y-4 shadow-xl">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Primary Account Address</span>
-            <span className="text-[10px] px-2 py-0.5 rounded bg-brand-900/50 text-brand-400 border border-brand-500/20 font-mono">EVM</span>
+        <div className="md:col-span-2 space-y-4">
+          {/* EVM Address Card */}
+          <div className="p-6 rounded-2xl bg-dark-card border border-dark-border space-y-3 shadow-xl">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Ethereum & EVM Address</span>
+              <span className="text-[10px] px-2 py-0.5 rounded bg-brand-900/50 text-brand-400 border border-brand-500/20 font-mono font-semibold">EVM (m/44'/60'/0'/0/0)</span>
+            </div>
+
+            <div className="p-4 rounded-xl bg-dark-bg border border-dark-border flex items-center justify-between gap-2">
+              <span className="font-mono text-xs sm:text-sm text-white font-semibold truncate">
+                {activeAddress || '0x71C7656EC7ab88b098def1734b743b44628b36d2'}
+              </span>
+              <button
+                onClick={handleCopyEvmAddress}
+                className="p-2 rounded-lg bg-dark-card text-slate-300 hover:text-white border border-dark-border transition shrink-0"
+              >
+                {copiedEvm ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-500">Supports ETH, MATIC, BNB, Arbitrum, Base & all ERC-20 tokens.</p>
           </div>
 
-          <div className="p-4 rounded-xl bg-dark-bg border border-dark-border flex items-center justify-between gap-2">
-            <span className="font-mono text-sm sm:text-base text-white font-semibold truncate">
-              {activeAddress || '0x71C7656EC7ab88b098def1734b743b44628b36d2'}
-            </span>
-            <button
-              onClick={handleCopyAddress}
-              className="p-2 rounded-lg bg-dark-card text-slate-300 hover:text-white border border-dark-border transition"
-            >
-              {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-            </button>
+          {/* Bitcoin Native SegWit Card */}
+          <div className="p-6 rounded-2xl bg-dark-card border border-dark-border space-y-3 shadow-xl">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Bitcoin Address (Native SegWit)</span>
+              <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono font-semibold">BTC (m/84'/0'/0'/0/0)</span>
+            </div>
+
+            <div className="p-4 rounded-xl bg-dark-bg border border-dark-border flex items-center justify-between gap-2">
+              <span className="font-mono text-xs sm:text-sm text-amber-300 font-semibold truncate">
+                {activeBtcAddress || 'bc1q9x820938472938472938472938472938472938'}
+              </span>
+              <button
+                onClick={handleCopyBtcAddress}
+                className="p-2 rounded-lg bg-dark-card text-slate-300 hover:text-white border border-dark-border transition shrink-0"
+              >
+                {copiedBtc ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-500">Native SegWit Bech32 address (BIP-84) with lowest transaction fees.</p>
           </div>
 
           <div className="pt-2 grid grid-cols-2 gap-4">

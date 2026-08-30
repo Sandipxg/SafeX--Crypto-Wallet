@@ -72,7 +72,7 @@ export default function ImportWalletPage() {
       const identity = await createAndSaveVault(password, fullPhrase)
 
       // Set active Zustand RAM session state
-      setSessionCredentials(identity.address, identity.publicKey, fullPhrase)
+      setSessionCredentials(identity.address, identity.btcAddress, identity.publicKey, fullPhrase)
 
       // Redirect to dashboard
       router.push('/dashboard')

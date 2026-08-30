@@ -7,6 +7,7 @@ interface VaultStoreState {
   hasVaultInStorage: boolean
   decryptedMnemonic: string | null
   activeAddress: `0x${string}` | null
+  activeBtcAddress: string | null
   activePublicKey: `0x${string}` | null
   autoLockTimeoutId: NodeJS.Timeout | number | null
 
@@ -14,7 +15,7 @@ interface VaultStoreState {
   checkVaultExists: () => Promise<boolean>
   unlock: (password: string) => Promise<void>
   lock: () => void
-  setSessionCredentials: (address: `0x${string}`, publicKey: `0x${string}`, mnemonic?: string) => void
+  setSessionCredentials: (address: `0x${string}`, btcAddress: string, publicKey: `0x${string}`, mnemonic?: string) => void
   resetAutoLockTimer: () => void
   wipeVault: () => Promise<void>
 }
@@ -29,14 +30,15 @@ const AUTO_LOCK_MS = 10 * 60 * 1000 // 10 minutes
  * useVaultStore (Zustand Store)
  * ============================================================================
  * @description In-RAM state store for managing client wallet lock status,
- *              active wallet address, decrypted seed phrase string, and the
- *              10-minute auto-lock security timer.
+ *              active EVM & Bitcoin wallet addresses, decrypted seed phrase string,
+ *              and the 10-minute auto-lock security timer.
  *
  * @state_fields:
  * - vaultState         : 'LOCKED' | 'UNLOCKED'
  * - hasVaultInStorage  : boolean (whether encrypted record exists in IndexedDB)
  * - decryptedMnemonic  : string | null (held in RAM ONLY while UNLOCKED)
  * - activeAddress      : '0x...' public EVM address
+ * - activeBtcAddress   : 'bc1q...' public Bitcoin Native SegWit address
  * - autoLockTimeoutId  : active timer handle for 10-minute auto-lock
  *
  * @actions:
@@ -51,6 +53,7 @@ export const useVaultStore = create<VaultStoreState>((set, get) => ({
   hasVaultInStorage: false,
   decryptedMnemonic: null,
   activeAddress: null,
+  activeBtcAddress: null,
   activePublicKey: null,
   autoLockTimeoutId: null,
 
@@ -61,7 +64,7 @@ export const useVaultStore = create<VaultStoreState>((set, get) => ({
   },
 
   unlock: async (password: string) => {
-    const { mnemonic, address, publicKey } = await unlockVault(password)
+    const { mnemonic, address, btcAddress, publicKey } = await unlockVault(password)
     
     // Clear existing timer if any
     const currentTimer = get().autoLockTimeoutId
@@ -76,13 +79,14 @@ export const useVaultStore = create<VaultStoreState>((set, get) => ({
       vaultState: 'UNLOCKED',
       decryptedMnemonic: mnemonic,
       activeAddress: address,
+      activeBtcAddress: btcAddress,
       activePublicKey: publicKey,
       hasVaultInStorage: true,
       autoLockTimeoutId: timer,
     })
   },
 
-  setSessionCredentials: (address: `0x${string}`, publicKey: `0x${string}`, mnemonic?: string) => {
+  setSessionCredentials: (address: `0x${string}`, btcAddress: string, publicKey: `0x${string}`, mnemonic?: string) => {
     const currentTimer = get().autoLockTimeoutId
     if (currentTimer) clearTimeout(currentTimer)
 
@@ -94,6 +98,7 @@ export const useVaultStore = create<VaultStoreState>((set, get) => ({
       vaultState: mnemonic ? 'UNLOCKED' : 'LOCKED',
       decryptedMnemonic: mnemonic || null,
       activeAddress: address,
+      activeBtcAddress: btcAddress,
       activePublicKey: publicKey,
       hasVaultInStorage: true,
       autoLockTimeoutId: timer,
@@ -130,6 +135,7 @@ export const useVaultStore = create<VaultStoreState>((set, get) => ({
     set({
       hasVaultInStorage: false,
       activeAddress: null,
+      activeBtcAddress: null,
       activePublicKey: null,
     })
   },
