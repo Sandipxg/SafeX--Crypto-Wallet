@@ -96,6 +96,32 @@ export const authRouter = {
     }
   },
 
+  async getMyAddresses(input: { walletAddress: string; btcAddress?: string }) {
+    const normalizedAddress = input.walletAddress.toLowerCase()
+    const user = await db.users.findByOptional({ walletAddress: normalizedAddress })
+    if (!user) {
+      throw new Error('User wallet not registered.')
+    }
+
+    const addresses: Array<{ chain: string; address: string; path: string }> = [
+      {
+        chain: 'ethereum',
+        address: user.walletAddress,
+        path: "m/44'/60'/0'/0/0",
+      },
+    ]
+
+    if (input.btcAddress) {
+      addresses.push({
+        chain: 'bitcoin',
+        address: input.btcAddress,
+        path: "m/84'/0'/0'/0/0",
+      })
+    }
+
+    return { addresses }
+  },
+
   async logout() {
     return { success: true }
   },

@@ -91,21 +91,21 @@ In the browser: create a new wallet, back up the seed phrase, log out, log back 
 
 ## Learn
 
-- [ ] Elliptic Curve math (secp256k1, Ed25519, Scalar Multiplication)
-- [ ] BIP32 HD Wallet Extended Keys (`xprv`/`xpub`) & Hardened Derivation
-- [ ] BIP44 Multi-Chain Derivation Paths (`m/44'/60'/0'/0/0`)
-- [ ] Address Formats (EVM EIP-55 Checksum, Bitcoin P2PKH/Bech32/Taproot)
+- [x] Elliptic Curve math (secp256k1, Ed25519, Scalar Multiplication)
+- [x] BIP32 HD Wallet Extended Keys (`xprv`/`xpub`) & Hardened Derivation
+- [x] BIP44 Multi-Chain Derivation Paths (`m/44'/60'/0'/0/0`)
+- [x] Address Formats (EVM EIP-55 Checksum, Bitcoin P2PKH/Bech32/Taproot)
 
 ## Build — Backend
 
-- [ ] BIP32 master seed → HD key derivation tree module (+ tests against official test vectors)
-- [ ] Multi-chain address generator (EVM EIP-55, Bitcoin Bech32/Taproot) from the user's derived keys
-- [ ] `getMyAddresses` oRPC endpoint returning derived addresses per chain
+- [x] BIP32 master seed → HD key derivation tree module (+ tests against official test vectors)
+- [x] Multi-chain address generator (EVM EIP-55, Bitcoin Bech32/Taproot) from the user's derived keys
+- [x] `getMyAddresses` oRPC endpoint returning derived addresses per chain
 
 ## Build — Frontend
 
-- [ ] **"My Addresses" page** — one card per chain (EVM, Bitcoin) showing the address, a QR code, and a copy button
-- [ ] Chain selector component (reused by later phases)
+- [x] **"My Addresses" page** — one card per chain (EVM, Bitcoin) showing the address, a QR code, and a copy button
+- [x] Chain selector component (reused by later phases)
 
 ## ✅ Definition of Done
 
