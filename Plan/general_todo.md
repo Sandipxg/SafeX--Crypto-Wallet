@@ -117,8 +117,8 @@ Logged-in user sees their real EVM and Bitcoin receiving addresses with scannabl
 
 ## Learn
 
-- [ ] Core Blockchain Architecture (Blocks, Transactions, Serialization)
-- [ ] Account model, nonces
+- [x] Core Blockchain Architecture (Blocks, Transactions, Serialization)
+- [x] Account model, nonces
 - [ ] Raw EVM transaction serialization (RLP & EIP-1559 fields)
 - [ ] ECDSA signing/verification (`@noble/secp256k1`)
 - [ ] JSON-RPC methods (`eth_call`, `eth_sendRawTransaction`, `eth_estimateGas`)
