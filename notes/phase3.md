@@ -347,6 +347,8 @@ World State Database (Key-Value Store):
 Map < EthereumAddress (0x...), AccountState >
 ```
 
+<mark>🟡 **Infographic Guide**: To view more about **"Seed Phrase to EVM & Bitcoin Address Derivation"**, [click here to open the diagram](file:///c:/Users/mrsan/Desktop/SafeX---Crypto-Wallet/notes/seedphraseTo_evm_btc_addresses.png).</mark>
+
 ---
 
 # 2. The Account State Object (4 Fields)
@@ -559,6 +561,8 @@ Speed Up / Cancel:   [ Nonce: 10, MaxFee: 30 Gwei ] ──► Broadcasted to Mem
                                                                     ▼
 12. UI Confirmed ◄────────── 11. World State Updated ◄────── 10. EVM Execution
 ```
+
+<mark>🟡 **Infographic Guide**: To view more about **"Complete Transaction Lifecycle (Wallet → Mempool → Validator → Block)"**, [click here to open the diagram](file:///c:/Users/mrsan/Desktop/SafeX---Crypto-Wallet/notes/complete_transaction_lifecycle.png).</mark>
 
 ---
 
@@ -857,6 +861,8 @@ interface EIP1559Transaction {
 }
 ```
 
+<mark>🟡 **Infographic Guide**: To view more about **"EIP-1559 Raw Transaction Structure & Anatomy"**, [click here to open the diagram](file:///c:/Users/mrsan/Desktop/SafeX---Crypto-Wallet/notes/eip1559_transaction_anatomy.png).</mark>
+
 ---
 
 # 4. Detailed Field Breakdown
@@ -966,6 +972,8 @@ Raw transactions do **not** transmit a `from` address. Instead, nodes extract th
 | **`82 5208`** | RLP encoded `gasLimit` (21,000) |
 | **`94 71c7...`** | RLP encoded 20-byte recipient address (`to`) |
 
+<mark>🟡 **Infographic Guide**: To view more about **"Message Hash vs. Transaction Hash (TxID)"**, [click here to open the diagram](file:///c:/Users/mrsan/Desktop/SafeX---Crypto-Wallet/notes/message_hash_vs_transaction_hash.png).</mark>
+
 ---
 
 | **Why is `from` omitted in raw bytes?** | Sender address is mathematically recovered from $(r, s, \text{yParity})$ via `ecrecover`. |
@@ -995,6 +1003,8 @@ Raw transactions do **not** transmit a `from` address. Instead, nodes extract th
                                          ▼
  Node ecrecover(h, r, s, yParity) ──► Reconstructed Public Key ──► Verifies Address
 ```
+
+<mark>🟡 **Infographic Guide**: To view more about **"Offline ECDSA Transaction Signing Pipeline"**, [click here to open the diagram](file:///c:/Users/mrsan/Desktop/SafeX---Crypto-Wallet/notes/transaction_signing_pipeline.png).</mark>
 
 ---
 
@@ -1135,6 +1145,8 @@ Signature (r, s, yParity) + Message Hash (h)
                     ▼
     Address = Keccak256(K)[12..32] ──► 0x71C7...
 ```
+
+<mark>🟡 **Infographic Guide**: To view more about **"How Ethereum Recovers Sender Address from Transaction Object Bytes"**, [click here to open the diagram](file:///c:/Users/mrsan/Desktop/SafeX---Crypto-Wallet/notes/How_ethereum_recover_senderAddress_from_transactionObjectBytes.png).</mark>
 
 ---
 
@@ -1299,6 +1311,8 @@ export const publicClient = createPublicClient({
 })
 ```
 
+<mark>🟡 **Infographic Guide**: To view more about **"SafeX RPC Service & Client/Server Architecture"**, [click here to open the diagram](file:///c:/Users/mrsan/Desktop/SafeX---Crypto-Wallet/notes/safex_rpc_architecture.png).</mark>
+
 ---
 
 # 🎯 Concept Revision Cheat Sheet
@@ -1355,6 +1369,8 @@ When a user performs an action in SafeX, the wallet executes RPC calls in the fo
 | **Open Review Screen** | `eth_feeHistory` + `eth_maxPriorityFeePerGas` | Calculate base fee trend & recommended validator tip |
 | **Press Confirm** | `eth_sendRawTransaction` | Broadcast signed RLP hex bytes (`0x02f8...`) |
 | **Watch Pending** | `eth_getTransactionReceipt` | Poll until transaction is mined into a block |
+
+<mark>🟡 **Infographic Guide**: To view more about **"JSON-RPC Methods & Viem API Journey"**, [click here to open the diagram](file:///c:/Users/mrsan/Desktop/SafeX---Crypto-Wallet/notes/viem_jsonRpc_methods.png).</mark>
 
 ---
 
