@@ -777,14 +777,914 @@ $$\text{Confirmations} = (\text{Current Block Height} - \text{Mined Block Height
 
 ---
 
+| **Why poll `eth_getTransactionReceipt`?** | Broadcasting to mempool does not guarantee execution; receipt confirms block inclusion and execution status. |
+
+---
+
+# Chapter 3.4 — Raw EVM Transaction Serialization (EIP-1559 + RLP + Bytes)
+
+> **Objective**: Master the exact binary serialization format of EIP-1559 (Type-2) transactions, Recursive Length Prefix (RLP) encoding rules, signing payload construction, and signature component insertion ($r, s, \text{yParity}$).
+
+---
+
+# 1. Pipeline Overview
+
+```text
+ ┌────────────────────────────────────────────────────────┐
+ │ 1. Transaction Object Construction                     │
+ │    (chainId, nonce, maxPriorityFee, maxFee, gasLimit,  │
+ │     to, value, data, accessList)                       │
+ └──────────────────────────┬─────────────────────────────┘
+                            │
+                            ▼
+ ┌────────────────────────────────────────────────────────┐
+ │ 2. Unsigned RLP Serialization                          │
+ │    RLP([chainId, nonce, maxPriorityFee, maxFee, ...])  │
+ └──────────────────────────┬─────────────────────────────┘
+                            │
+                            ▼
+ ┌────────────────────────────────────────────────────────┐
+ │ 3. Message Digest Generation                           │
+ │    Signing Hash = Keccak256(0x02 || Unsigned RLP Bytes)│
+ └──────────────────────────┬─────────────────────────────┘
+                            │
+                            ▼
+ ┌────────────────────────────────────────────────────────┐
+ │ 4. ECDSA Signature Generation                          │
+ │    (r, s, yParity) = Sign(Signing Hash, Private Key)   │
+ └──────────────────────────┬─────────────────────────────┘
+                            │
+                            ▼
+ ┌────────────────────────────────────────────────────────┐
+ │ 5. Signed RLP Assembly & Raw Bytes                     │
+ │    Raw Bytes = 0x02 || RLP([Unsigned Fields...,        │
+ │                            yParity, r, s])             │
+ └────────────────────────────────────────────────────────┘
+```
+
+---
+
+# 2. Legacy (`0x00`) vs. EIP-1559 (`0x02`) Transactions
+
+| Feature | Legacy Transaction (Type 0) | EIP-1559 Transaction (Type 2) |
+| :--- | :--- | :--- |
+| **Transaction Type Byte** | None (or `0x00`) | **`0x02`** (Prefixes payload) |
+| **Gas Pricing** | Single `gasPrice` field | `maxFeePerGas` + `maxPriorityFeePerGas` |
+| **Signature Field** | Includes `v` (encodes chainId) | Includes **`yParity`** (`0` or `1`) + explicit `chainId` |
+| **Fee Destination** | All gas paid to miner | Base fee burned; Priority fee tip to validator |
+
+---
+
+# 3. Anatomy of an EIP-1559 Transaction (The 12 Fields)
+
+```typescript
+interface EIP1559Transaction {
+  // Unsigned Fields (1–9)
+  chainId: bigint              // 1. Target network identifier (e.g. Sepolia = 11155111)
+  nonce: bigint                // 2. Outgoing transaction counter
+  maxPriorityFeePerGas: bigint // 3. Tip per gas unit paid directly to validator
+  maxFeePerGas: bigint         // 4. Absolute maximum total fee (Base Fee + Tip)
+  gasLimit: bigint             // 5. Maximum gas units authorized (21,000 for standard ETH)
+  to: string                   // 6. 20-byte recipient or contract address
+  value: bigint                // 7. Amount of ETH in Wei (10^18)
+  data: string                 // 8. Hex payload ("0x" for plain ETH; ABI calldata for contracts)
+  accessList: Array<any>       // 9. Optional pre-declared access storage slots (usually [])
+  
+  // Signature Fields (10–12, added after signing)
+  yParity: number              // 10. Recovery ID parity bit (0 or 1)
+  r: string                    // 11. 32-byte ECDSA signature component (x-coordinate of point R)
+  s: string                    // 12. 32-byte ECDSA signature component (proof scalar)
+}
+```
+
+---
+
+# 4. Detailed Field Breakdown
+
+| Field # | Name | Type | Purpose |
+| :--- | :--- | :--- | :--- |
+| **1** | `chainId` | BigInt | Replay protection across different EVM networks |
+| **2** | `nonce` | BigInt | Sequential transaction counter preventing replay attacks |
+| **3** | `maxPriorityFeePerGas` | BigInt | Direct validator tip per unit of gas consumed |
+| **4** | `maxFeePerGas` | BigInt | Ceiling price cap for (Base Fee + Priority Fee) |
+| **5** | `gasLimit` | BigInt | Maximum computational units authorized for execution |
+| **6** | `to` | 20-byte Hex | Target recipient or contract address |
+| **7** | `value` | BigInt | Native asset transfer amount in integer Wei |
+| **8** | `data` | Bytes | Empty `0x` for native transfers; ABI call bytes for smart contracts |
+| **9** | `accessList` | Array | Pre-warmed storage keys to reduce EVM gas (default: `[]`) |
+| **10** | `yParity` | Integer | Parity indicator (`0` or `1`) for public key recovery |
+| **11** | `r` | 32-byte Hex | First half of ECDSA signature |
+| **12** | `s` | 32-byte Hex | Second half of ECDSA signature |
+
+---
+
+# 5. Recursive Length Prefix (RLP) Encoding Rules
+
+RLP is Ethereum's deterministic serialization format for converting arbitrary nested structures into byte arrays without key names or structural overhead.
+
+### RLP Encoding Rules Matrix:
+
+| Data Type | Condition | Encoding Formula |
+| :--- | :--- | :--- |
+| **Single Byte** | Value $\in [0x00, 0x7f]$ | Represented as the single byte itself |
+| **Short String** | Length $\le 55$ bytes | Prefix `0x80 + length` followed by string bytes |
+| **Long String** | Length $> 55$ bytes | Prefix `0xb7 + len(length)` followed by length bytes + string bytes |
+| **Short List** | Total payload $\le 55$ bytes | Prefix **`0xc0 + length`** followed by concatenated element bytes |
+| **Long List** | Total payload $> 55$ bytes | Prefix `0xf7 + len(length)` followed by length bytes + element bytes |
+
+### RLP Example:
+To encode the list `[1, 2, 3]`:
+1. RLP(1) = `0x01`
+2. RLP(2) = `0x02`
+3. RLP(3) = `0x03`
+4. Concatenated elements length = 3 bytes
+5. List prefix = `0xc0 + 3` = `0xc3`
+6. Final RLP = `0xc3010203`
+
+---
+
+# 6. Unsigned Payload vs. Signed Payload Assembly
+
+### Unsigned Payload (For Hashing & Signing):
+
+$$\text{Signing Hash} = \text{Keccak256}\Big(\text{0x02} \parallel \text{RLP}\big([\text{chainId}, \text{nonce}, \text{maxPriorityFee}, \text{maxFee}, \text{gasLimit}, \text{to}, \text{value}, \text{data}, \text{accessList}]\big)\Big)$$
+
+### Signed Payload (Final Broadcast Bytes):
+
+$$\text{Raw Tx Bytes} = \text{0x02} \parallel \text{RLP}\big([\text{chainId}, \text{nonce}, \text{maxPriorityFee}, \text{maxFee}, \text{gasLimit}, \text{to}, \text{value}, \text{data}, \text{accessList}, \text{yParity}, \text{r}, \text{s}]\big)$$
+
+---
+
+# 7. Signing Hash vs. Transaction Hash
+
+| Hash Name | Input Data | Formula | Purpose |
+| :--- | :--- | :--- | :--- |
+| **Signing Hash** | Unsigned fields (1–9) | $\text{Keccak256}(0x02 \parallel \text{RLP}(\text{Unsigned}))$ | Digest passed into ECDSA `sign()` algorithm |
+| **Transaction Hash** | Signed fields (1–12) | $\text{Keccak256}(0x02 \parallel \text{RLP}(\text{Signed}))$ | Unique 32-byte transaction identifier on-chain |
+
+---
+
+# 8. Public Key & Sender Address Recovery (`ecrecover`)
+
+Raw transactions do **not** transmit a `from` address. Instead, nodes extract the sender address mathematically:
+
+```text
+               Raw Transaction Bytes + (yParity, r, s)
+                                  │
+                                  ▼
+                        ecrecover(hash, r, s, yParity)
+                                  │
+                                  ▼
+                       Recovered 64-byte Public Key
+                                  │
+                                  ▼
+                      Keccak256(PublicKey)[12..32]
+                                  │
+                                  ▼
+                      Sender Address (0x71C7...)
+```
+
+- **Cryptographic Guarantee**: If the recovered address does not match an account with sufficient balance and matching nonce, the transaction fails signature verification immediately.
+
+---
+
+# 9. Raw Byte Payload Decoding (`0x02f872...`)
+
+```text
+0x02 f8 72 83 11155111 08 84 77359400 85 0826372000 82 5208 94 71c7656ec7ab88b098def1734b743b44628b36d2 ...
+```
+
+| Byte Segment | Meaning |
+| :--- | :--- |
+| **`0x02`** | EIP-1559 Transaction Type Header |
+| **`f8`** | RLP Long List Prefix ($\text{0xf7} + 1$) |
+| **`72`** | Total length of remaining list payload (114 bytes) |
+| **`83 11155111`** | RLP encoded `chainId` (`11155111` = Sepolia) |
+| **`08`** | RLP encoded `nonce` (`8`) |
+| **`84 77359400`** | RLP encoded `maxPriorityFeePerGas` (2 Gwei) |
+| **`85 0826372000`** | RLP encoded `maxFeePerGas` (35 Gwei) |
+| **`82 5208`** | RLP encoded `gasLimit` (21,000) |
+| **`94 71c7...`** | RLP encoded 20-byte recipient address (`to`) |
+
+---
+
+| **Why is `from` omitted in raw bytes?** | Sender address is mathematically recovered from $(r, s, \text{yParity})$ via `ecrecover`. |
+
+---
+
+# Chapter 3.5 — ECDSA Signing & Verification (`@noble/secp256k1`)
+
+> **Objective**: Master the mathematical mechanics of Elliptic Curve Cryptography (`secp256k1`), scalar multiplication, ECDSA signature generation ($r, s, \text{yParity}$), public key recovery (`ecrecover`), and zero-trust client signing architecture.
+
+---
+
+# 1. Cryptographic Pipeline Overview
+
+```text
+ 12-Word Mnemonic ──► 512-Bit Seed ──► Master Private Key ──► Derived Private Key (k)
+                                                                    │
+                                                                    ▼
+ Ethereum Address ◄── Keccak256 ◄── Public Key (K) ◄── Scalar Mult (k × G)
+        │
+        ▼
+ Unsigned Payload ──► Keccak256 ──► Message Digest (h)
+                                         │
+                                         ▼
+ ECDSA Sign(h, k) ────────────────► Signature (r, s, yParity)
+                                         │
+                                         ▼
+ Node ecrecover(h, r, s, yParity) ──► Reconstructed Public Key ──► Verifies Address
+```
+
+---
+
+# 2. Why Elliptic Curve Cryptography (ECC) over RSA?
+
+| Feature | RSA Cryptography | Elliptic Curve Cryptography (secp256k1) |
+| :--- | :--- | :--- |
+| **Key Length for 128-bit Security** | 2,048 bits (256 bytes) | **256 bits (32 bytes)** |
+| **Signature Size** | 256 bytes | **64–65 bytes** ($r, s, \text{yParity}$) |
+| **Computation Speed** | Slow signature generation | Extremely fast, lightweight scalar arithmetic |
+| **Mathematical Basis** | Prime Integer Factorization Problem | **Elliptic Curve Discrete Logarithm Problem (ECDLP)** |
+
+---
+
+# 3. 256-Bit Private Key Space
+
+A 256-bit private key is a secret integer $k$ chosen uniformly at random in the range:
+
+$$1 \le k \le n - 1 \quad (\text{where } n \approx 1.1579 \times 10^{77})$$
+
+### Magnitude Comparison:
+- Estimated atoms in planet Earth: $\approx 10^{50}$
+- Estimated atoms in Milky Way galaxy: $\approx 10^{68}$
+- **Total `secp256k1` Private Keys**: $\approx 1.15 \times 10^{77}$
+
+Brute-forcing a 256-bit key by trying every integer is physically impossible under classical physics.
+
+---
+
+# 4. What is `secp256k1`?
+
+`secp256k1` is the specific parameters of the elliptic curve chosen by Satoshi Nakamoto for Bitcoin and adopted by Ethereum:
+
+- **`sec`**: Standards for Efficient Cryptography
+- **`p`**: Prime finite field
+- **`256`**: 256-bit prime field length
+- **`k1`**: Koblitz curve variant 1
+
+### Curve Equation over Finite Field $\mathbb{F}_p$:
+
+$$y^2 = x^3 + 7 \pmod p$$
+
+$$\text{Prime } p = 2^{256} - 2^{32} - 977 = \text{0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F}$$
+
+---
+
+# 5. The Predefined Generator Point $G$
+
+All clients and Ethereum nodes agree on a fixed public starting point $G = (x_G, y_G)$ on the curve:
+
+```text
+G_x = 0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798
+G_y = 0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8
+```
+
+---
+
+# 6. Scalar Multiplication: Private Key $\longrightarrow$ Public Key
+
+The Public Key $K = (x_K, y_K)$ is computed by adding the generator point $G$ to itself $k$ times:
+
+$$K = k \times G = \underbrace{G + G + G + \dots + G}_{k \text{ times}}$$
+
+- **Point Addition ($P + Q = R$)**: A geometric operation where a straight line intersecting points $P$ and $Q$ on the curve reflects across the x-axis to find $R$.
+- **Point Doubling ($2P = R$)**: Tangent line calculation used in fast double-and-add scalar multiplication.
+
+---
+
+# 7. The One-Way Trapdoor: ECDLP Security
+
+$$\text{Given } k \text{ and } G \implies \text{Calculating } K = k \times G \text{ is EASY (Milliseconds)}$$
+
+$$\text{Given } K \text{ and } G \implies \text{Finding } k \text{ such that } K = k \times G \text{ is INFEASIBLE (Trillions of Years)}$$
+
+This asymmetry is known as the **Elliptic Curve Discrete Logarithm Problem (ECDLP)** and forms the core security foundation of non-custodial wallets.
+
+---
+
+# 8. Public Key Serialization Formats
+
+A public key is a 2D coordinate point $(X, Y)$ on the curve:
+
+| Format | Byte Size | Structure / Encoding | Usage |
+| :--- | :--- | :--- | :--- |
+| **Uncompressed Public Key** | **65 bytes** | Prefix `0x04` $\parallel X$ (32 bytes) $\parallel Y$ (32 bytes) | Used by Ethereum to derive addresses |
+| **Raw Uncompressed (No Prefix)** | **64 bytes** | $X$ (32 bytes) $\parallel Y$ (32 bytes) | Keccak-256 hashed to derive 20-byte address |
+| **Compressed Public Key** | **33 bytes** | Prefix (`0x02` if $Y$ is even, `0x03` if $Y$ is odd) $\parallel X$ (32 bytes) | Used extensively in Bitcoin SegWit / Taproot |
+
+---
+
+# 9. Ethereum Address Derivation Formula
+
+$$\text{Ethereum Address} = \text{Last 20 Bytes of }\Big(\text{Keccak256}\big(\text{Uncompressed 64-Byte Public Key}\big)\Big)$$
+
+```text
+64-Byte Public Key (X || Y) ──► Keccak-256 Hash (32 bytes) ──► Slice Last 20 Bytes ──► 0x71C7...
+```
+
+---
+
+# 10. ECDSA Signature Generation ($r, s, \text{yParity}$)
+
+When signing an unsigned transaction payload hash $h = \text{Keccak256}(\text{UnsignedPayload})$:
+
+### Step-by-Step Signing Algorithm:
+1. Generate a cryptographically secure **internal random nonce $k_{ecdsa}$** for this signature.
+2. Compute the temporary curve point $R = k_{ecdsa} \times G = (x_R, y_R)$.
+3. Set **$r = x_R \pmod n$** (32 bytes). If $r = 0$, retry with a new $k_{ecdsa}$.
+4. Calculate **$s = k_{ecdsa}^{-1} \times (h + r \times k_{private}) \pmod n$** (32 bytes).
+5. Calculate **$\text{yParity}$** ($0$ if $y_R$ is even, $1$ if $y_R$ is odd).
+
+---
+
+# 11. Transaction Nonce vs. ECDSA Signing Nonce ($k$)
+
+| Nonce Type | Scope / Layer | Storage | Danger of Reuse |
+| :--- | :--- | :--- | :--- |
+| **Transaction Nonce** | EVM Protocol Layer | Explicitly stored in transaction payload | Prevents transaction replay attacks |
+| **ECDSA Signing Nonce ($k$)** | Cryptographic Layer | Never stored or transmitted (temporary RAM scalar) | **CATASTROPHIC**: Reusing $k$ twice leaks the private key instantly! |
+
+> 🚨 **Critical Rule**: SafeX relies on RFC 6979 deterministic nonce generation in `@noble/secp256k1` so that $k$ is derived deterministically from $\text{Hash}(h \parallel k_{private})$, eliminating any risk of duplicate $k$ reuse.
+
+---
+
+# 12. Public Key & Address Recovery (`ecrecover`)
+
+Ethereum nodes recover the public key and sender address directly from $(h, r, s, \text{yParity})$:
+
+```text
+Signature (r, s, yParity) + Message Hash (h)
+                    │
+                    ▼
+          Point R = (r, yParity)
+                    │
+                    ▼
+     Public Key K = r⁻¹ × (s × R - h × G)
+                    │
+                    ▼
+    Address = Keccak256(K)[12..32] ──► 0x71C7...
+```
+
+---
+
+# 13. Signature Verification & Tamper Resistance
+
+To verify a transaction signature without recovering the key:
+
+$$u_1 = h \times s^{-1} \pmod n \quad \text{and} \quad u_2 = r \times s^{-1} \pmod n$$
+
+$$\text{Check if } x \text{-coordinate of } (u_1 \times G + u_2 \times K) \equiv r \pmod n$$
+
+- **Tamper Resistance**: If an attacker modifies 1 bit of the transaction payload (e.g. changing recipient or amount), $h$ changes completely, signature verification fails, and the EVM rejects the transaction.
+
+---
+
+# 14. Zero-Trust Client Security Rules in SafeX
+
+| Security Rule | Implementation in SafeX |
+| :--- | :--- |
+| **Encrypted Storage** | Seed phrase encrypted with Argon2id + AES-256-GCM in IndexedDB |
+| **Password Auth** | Vault decrypted into client memory only upon password entry |
+| **Private Key Lifetime** | Private key derived in RAM for signing and immediately zeroized (`buffer.fill(0)`) |
+| **Zero Backend Transmission** | Private keys and seed phrases **NEVER** leave local client RAM |
+
+---
+
+| **What is the purpose of `yParity`?** | Resolves whether the $Y$-coordinate of point $R$ is even or odd for exact public key recovery. |
+| **Why doesn't raw tx contain `from`?** | Nodes recover the sender public key and address mathematically via `ecrecover(h, r, s, yParity)`. |
+| **Difference between Tx Nonce and ECDSA $k$?** | Tx Nonce prevents network replay attacks; ECDSA $k$ is an internal secret scalar for signature creation. |
+
+---
+
+# Chapter 3.6 — `viem` Transport & Client Configuration
+
+> **Objective**: Understand the network communication layer between client wallets, backend API services, and Ethereum RPC nodes using `viem` transports, public clients, and multi-chain configurations.
+
+---
+
+# 1. Network Topology: How Wallets Talk to Ethereum
+
+Client applications do **not** join the p2p execution network directly. They interact via **JSON-RPC nodes**:
+
+```text
+┌────────────────────────┐              ┌────────────────────────┐              ┌────────────────────────┐
+│     SafeX Client       │              │     JSON-RPC Node      │              │  Ethereum P2P Network  │
+│  (Next.js + oRPC API)  │ ───────────► │ (Geth/Nethermind/Besu) │ ───────────► │ (Validators & Peers)   │
+│                        │   JSON-RPC   │ (Infura / Alchemy API) │   Devp2p     │                        │
+└────────────────────────┘              └────────────────────────┘              └────────────────────────┘
+```
+
+- **RPC Node**: An Ethereum node client exposing HTTP/WebSocket RPC endpoints for querying state and broadcasting transactions.
+- **JSON-RPC Protocol**: Method-based request/response format (e.g. `eth_getBalance`, `eth_sendRawTransaction`).
+
+---
+
+# 2. What is `viem`?
+
+`viem` is a lightweight, tree-shakeable TypeScript interface for Ethereum that abstracts low-level JSON-RPC HTTP calls into typed functions.
+
+| Feature | `ethers.js` | `viem` |
+| :--- | :--- | :--- |
+| **TypeScript Support** | Basic types | Strict first-class type inference |
+| **Bundle Size** | Larger (~120KB) | Lightweight & tree-shakeable (~35KB) |
+| **EIP-1559 Native** | Supported | Native first-class support |
+| **Architecture** | Class-based abstraction | Functional & modular client model |
+
+---
+
+# 3. Transports in `viem` (`http` vs. `webSocket`)
+
+A **Transport** defines the underlying communication channel used to send JSON-RPC requests:
+
+```typescript
+import { createPublicClient, http, webSocket } from 'viem'
+import { sepolia } from 'viem/chains'
+
+// HTTP Transport (Stateless Request/Response)
+export const publicClientHttp = createPublicClient({
+  chain: sepolia,
+  transport: http(process.env.ALCHEMY_RPC_URL)
+})
+
+// WebSocket Transport (Persistent Bi-Directional Stream)
+export const publicClientWs = createPublicClient({
+  chain: sepolia,
+  transport: webSocket(process.env.ALCHEMY_WS_URL)
+})
+```
+
+### Transport Comparison:
+
+| Transport | Communication Model | Best Used For |
+| :--- | :--- | :--- |
+| **`http()`** | Stateless POST request / response | Standard queries (`getBalance`, `estimateGas`, `sendRawTransaction`) |
+| **`webSocket()`** | Persistent bi-directional connection | Real-time block subscriptions, event listeners, and mempool monitoring |
+| **IPC** | Local Unix domain sockets | Backend services co-located on the same server as a self-hosted Geth node |
+
+---
+
+# 4. Chain Configurations
+
+`viem` provides pre-configured chain metadata objects containing Chain IDs, native currencies, RPC endpoints, and block explorers:
+
+```typescript
+import { mainnet, sepolia, polygon, arbitrum, base } from 'viem/chains'
+```
+
+### Supported EVM Networks Matrix:
+
+| Chain Name | Chain ID | Native Token | Explorer |
+| :--- | :--- | :--- | :--- |
+| **Ethereum Mainnet** | `1` | ETH | `etherscan.io` |
+| **Sepolia Testnet** | `11155111` | ETH | `sepolia.etherscan.io` |
+| **Polygon PoS** | `137` | POL / MATIC | `polygonscan.com` |
+| **Arbitrum One** | `42161` | ETH | `arbiscan.io` |
+| **Base** | `8453` | ETH | `basescan.org` |
+
+---
+
+# 5. Public Client vs. Wallet Client
+
+`viem` separates read operations from signing operations into two distinct client abstractions:
+
+### `createPublicClient()` (Read & Broadcast):
+```typescript
+const publicClient = createPublicClient({
+  chain: sepolia,
+  transport: http()
+})
+
+// Read Blockchain State & Broadcast Signed Bytes
+const balance = await publicClient.getBalance({ address: '0x71C7...' })
+const hash = await publicClient.sendRawTransaction({ serializedTransaction: '0x02f872...' })
+```
+
+### `createWalletClient()` (Client Account Signing):
+- Used in browser extension wallets where private keys interact directly with DApps via window providers (`window.ethereum`).
+
+> 🛡️ **SafeX Architecture Decision**: SafeX handles seed phrases and private key derivation strictly inside client-side vault modules (`vault.ts` & `signer.ts`). The backend uses **`PublicClient`** to query gas rates, read balances, and broadcast signed raw transaction bytes.
+
+---
+
+# 6. SafeX Backend RPC Service Architecture
+
+```text
+apps/server/src/core/blockchain/
+├── rpc.ts            ──► Exports singleton `publicClient` instance
+├── gas.ts            ──► Gas fee estimation service (`maxFeePerGas`, `maxPriorityFeePerGas`)
+├── balance.ts        ──► Balance fetching service (`getBalance`)
+└── broadcaster.ts    ──► Raw transaction broadcasting service (`sendRawTransaction`)
+```
+
+### Singleton `rpc.ts` Implementation:
+```typescript
+import { createPublicClient, http } from 'viem'
+import { sepolia } from 'viem/chains'
+import { config } from '../config/env.js'
+
+export const publicClient = createPublicClient({
+  chain: sepolia,
+  transport: http(config.alchemyRpcUrl)
+})
+```
+
+---
+
 # 🎯 Concept Revision Cheat Sheet
 
 | Question | Core Engineering Answer |
 | :--- | :--- |
-| **Why validate before mempool?** | Prevents invalid or un-fundable spam transactions from clogging network peer bandwidth. |
-| **Why are mempools different across nodes?** | Transactions propagate peer-to-peer over time; nodes see transactions in slightly different order. |
-| **Why is Tx Hash returned immediately?** | Tx Hash is simply `Keccak256(rawBytes)`, which is calculated before mining. |
-| **What changes in World State after execution?** | Sender balance decreases, recipient balance increases, sender nonce increments by +1. |
-| **Why poll `eth_getTransactionReceipt`?** | Broadcasting to mempool does not guarantee execution; receipt confirms block inclusion and execution status. |
+| **What is an RPC Node?** | An Ethereum node running Geth/Nethermind exposing HTTP/WS APIs for querying state. |
+| **Difference between `http()` and `webSocket()`?** | `http()` is stateless request/response; `webSocket()` is a persistent connection for real-time alerts. |
+| **Why use `PublicClient` in SafeX backend?** | Used for querying balances, estimating gas, and broadcasting signed raw transaction bytes. |
+| **Why keep RPC URLs server-side?** | Prevents API key exposure, allows rate-limiting, and enables seamless provider failovers. |
 
+| **Why doesn't raw tx contain `from`?** | Nodes recover the sender public key and address mathematically via `ecrecover(h, r, s, yParity)`. |
+| **Difference between Tx Nonce and ECDSA $k$?** | Tx Nonce prevents network replay attacks; ECDSA $k$ is an internal secret scalar for signature creation. |
 
+---
+
+# Chapter 3.7 — JSON-RPC Deep Dive (SafeX Masterclass)
+
+> **Objective**: Master the exact JSON-RPC methods used by Ethereum wallets, understanding the request/response payloads, unit conversions, node simulation, gas estimation, raw transaction broadcasting, and receipt polling.
+
+---
+
+# 1. The Universal JSON-RPC 2.0 Request Format
+
+Every communication between a wallet client/backend and an Ethereum JSON-RPC node follows the JSON-RPC 2.0 specification:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "eth_METHOD_NAME",
+  "params": [...],
+  "id": 1
+}
+```
+
+| Field | Meaning |
+| :--- | :--- |
+| **`jsonrpc`** | Protocol version string (always `"2.0"`). |
+| **`method`** | The specific Ethereum JSON-RPC method to invoke (e.g. `eth_getBalance`). |
+| **`params`** | Array of parameters required by the method. |
+| **`id`** | Unique request identifier for matching request and response pairs. |
+
+---
+
+# 2. Complete SafeX Transaction Lifecycle & RPC Method Mapping
+
+When a user performs an action in SafeX, the wallet executes RPC calls in the following sequence:
+
+| User Action | RPC Method | Purpose |
+| :--- | :--- | :--- |
+| **Open Dashboard** | `eth_getBalance` | Fetch native ETH account balance |
+| **Click Send** | `eth_getTransactionCount` | Fetch next account nonce (using `"pending"`) |
+| **Enter Amount** | `eth_estimateGas` | Simulate EVM execution to estimate gas required |
+| **Open Review Screen** | `eth_feeHistory` + `eth_maxPriorityFeePerGas` | Calculate base fee trend & recommended validator tip |
+| **Press Confirm** | `eth_sendRawTransaction` | Broadcast signed RLP hex bytes (`0x02f8...`) |
+| **Watch Pending** | `eth_getTransactionReceipt` | Poll until transaction is mined into a block |
+
+---
+
+# 3. `eth_getBalance` — Querying Native ETH Balance
+
+When the dashboard opens, SafeX queries the account balance.
+
+### Request Payload:
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "eth_getBalance",
+  "params": [
+    "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+    "latest"
+  ],
+  "id": 1
+}
+```
+
+### Response Payload:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": "0x16345785D8A0000"
+}
+```
+
+### Hexadecimal Wei Conversion:
+Ethereum returns balances in Wei as hex strings.
+- Hex: `0x16345785D8A0000`
+- Decimal Wei: `100,000,000,000,000,000` Wei
+- Convert to ETH: $1 \text{ ETH} = 10^{18} \text{ Wei}$
+  $$\text{Balance in ETH} = \frac{100,000,000,000,000,000}{10^{18}} = 0.1 \text{ ETH}$$
+
+### `viem` Implementation:
+```typescript
+const balance = await publicClient.getBalance({
+  address: walletAddress,
+})
+```
+
+---
+
+# 4. `eth_getTransactionCount` — Account Nonce Retrieval
+
+Before constructing a transaction, SafeX must fetch the account's next nonce.
+
+### Request Payload:
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "eth_getTransactionCount",
+  "params": [
+    "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+    "pending"
+  ],
+  "id": 1
+}
+```
+
+### Why use `"pending"` block tag?
+- **`"latest"`**: Only counts transactions confirmed in mined blocks.
+- **`"pending"`**: Includes unconfirmed transactions currently sitting in the node's mempool. SafeX uses `"pending"` to prevent duplicate nonce collisions when sending consecutive transactions.
+
+### Response Payload:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": "0x08"
+}
+```
+- Hex `0x08` = Decimal `8`. The next transaction nonce must be `8`.
+
+### `viem` Implementation:
+```typescript
+const nonce = await publicClient.getTransactionCount({
+  address: walletAddress,
+  blockTag: 'pending',
+})
+```
+
+---
+
+# 5. `eth_estimateGas` — EVM Simulation
+
+When the user enters the recipient and value, SafeX estimates gas usage by requesting the RPC node to simulate transaction execution.
+
+### Request Payload:
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "eth_estimateGas",
+  "params": [{
+    "from": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+    "to": "0x1234567890123456789012345678901234567890",
+    "value": "0xde0b6b3a7640000"
+  }],
+  "id": 1
+}
+```
+
+### How EVM Simulation Works:
+The node pretends to execute the transaction in a temporary, isolated EVM instance.
+- **No state changes** are committed to the blockchain database.
+- **No real ETH** is transferred.
+- Returns the exact gas units consumed during the dry-run execution.
+
+### Response Payload:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": "0x5208"
+}
+```
+- Hex `0x5208` = Decimal `21000` Gas (standard native ETH transfer cost).
+
+### Gas Reference Values:
+| Transaction Type | Typical Gas Requirement |
+| :--- | :--- |
+| **Native ETH Transfer** | `21,000` |
+| **ERC-20 Token Transfer** | `50,000` – `70,000` |
+| **Uniswap Token Swap** | `150,000` – `300,000` |
+
+### `viem` Implementation:
+```typescript
+const gas = await publicClient.estimateGas({
+  account: fromAddress,
+  to: toAddress,
+  value: parseEther('1'),
+})
+```
+
+---
+
+# 6. `eth_feeHistory` & `eth_maxPriorityFeePerGas` — EIP-1559 Fee Estimation
+
+To calculate optimal EIP-1559 gas fees (`maxFeePerGas` and `maxPriorityFeePerGas`), SafeX queries historical fee trends and current validator tips.
+
+### Request Payload (`eth_feeHistory`):
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "eth_feeHistory",
+  "params": [
+    5,
+    "latest",
+    [25, 50, 75]
+  ],
+  "id": 1
+}
+```
+- `5`: Query the last 5 blocks.
+- `"latest"`: Up to the latest block.
+- `[25, 50, 75]`: Priority fee percentiles within each block.
+
+### Request Payload (`eth_maxPriorityFeePerGas`):
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "eth_maxPriorityFeePerGas",
+  "params": [],
+  "id": 1
+}
+```
+
+### Response & Fee Calculation:
+```json
+{
+  "result": "0x77359400"
+}
+```
+- Hex `0x77359400` = `2,000,000,000` Wei = `2` Gwei Priority Fee (Validator Tip).
+
+### EIP-1559 Combined Gas Formula:
+$$\text{Max Fee Per Gas} = \text{Base Fee} + \text{Max Priority Fee Per Gas}$$
+
+| Component | Value (Example) |
+| :--- | :--- |
+| **Current Base Fee** | 33 Gwei |
+| **Priority Fee (Tip)** | 2 Gwei |
+| **Max Fee Per Gas** | 35 Gwei |
+
+### `viem` Implementation:
+```typescript
+const fees = await publicClient.estimateFeesPerGas()
+// fees.maxFeePerGas
+// fees.maxPriorityFeePerGas
+```
+
+---
+
+# 7. `eth_sendRawTransaction` — Broadcasting Signed Transaction Bytes
+
+Once the transaction is serialized with RLP and signed offline with ECDSA, SafeX broadcasts the signed hex string to the network.
+
+### Request Payload:
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "eth_sendRawTransaction",
+  "params": [
+    "0x02f87283aa3608843b9acd00843b9acd00843b9acd00825208941234567890123456789012345678901234567890880de0b6b3a764000080c080a0..."
+  ],
+  "id": 1
+}
+```
+
+### Node Verification Workflow before Mempool Admission:
+1. **Receive Signed Bytes**: Parses RLP bytes and checks EIP-2718 transaction envelope type (`0x02`).
+2. **Recover Sender**: Executes `ecrecover(h, r, s, yParity)` to extract public key and derive sender address.
+3. **Verify Signature**: Verifies that ECDSA signature matches sender address.
+4. **State Checks**: Verifies sender has sufficient balance ($\text{value} + \text{maxFee} \times \text{gasLimit}$) and correct nonce.
+5. **Mempool Admission**: Admits transaction to mempool and gossip broadcasts to peers.
+
+### Response Payload:
+Returns the 32-byte Transaction Hash (TxID):
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": "0x8b1b2db6d4d74e1234567890abcdef1234567890abcdef1234567890abcdef12"
+}
+```
+
+### `viem` Implementation:
+```typescript
+const txHash = await publicClient.sendRawTransaction({
+  serializedTransaction: signedHexBytes,
+})
+```
+
+---
+
+# 8. `eth_getTransactionReceipt` — Transaction Confirmation Polling
+
+After obtaining the TxID, SafeX polls the node to track when the transaction moves from `pending` to `confirmed`.
+
+### Request Payload:
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "eth_getTransactionReceipt",
+  "params": [
+    "0x8b1b2db6d4d74e1234567890abcdef1234567890abcdef1234567890abcdef12"
+  ],
+  "id": 1
+}
+```
+
+### Pending vs. Mined Responses:
+
+- **While Pending in Mempool**:
+  ```json
+  {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": null
+  }
+  ```
+
+- **After Block Confirmation**:
+  ```json
+  {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "status": "0x1",
+      "blockNumber": "0x51A32",
+      "gasUsed": "0x5208",
+      "transactionHash": "0x8b1b2db6d4d74e...",
+      "effectiveGasPrice": "0x77359400"
+    }
+  }
+  ```
+
+### Receipt Fields:
+| Field | Meaning |
+| :--- | :--- |
+| **`status`** | Execution result (`0x1` = Success, `0x0` = Reverted / Failure). |
+| **`blockNumber`** | The block height in which the transaction was included. |
+| **`gasUsed`** | Actual gas units consumed during execution. |
+| **`transactionHash`** | Unique transaction identifier hash. |
+
+### `viem` Implementation:
+```typescript
+const receipt = await publicClient.waitForTransactionReceipt({
+  hash: txHash,
+})
+```
+
+---
+
+# 9. Bonus — `eth_call` (Read-Only Smart Contract Calls)
+
+`eth_call` allows reading state from smart contracts (e.g. querying ERC-20 token balances or allowance) without creating a transaction, signing, or paying gas fees.
+
+### Request Payload:
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "eth_call",
+  "params": [
+    {
+      "to": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "data": "0x70a08231000000000000000000000000742d35Cc6634C0532925a3b844Bc454e4438f44e"
+    },
+    "latest"
+  ],
+  "id": 1
+}
+```
+- No signature needed.
+- No gas fees.
+- Pure read simulation against latest block state.
+
+---
+
+# 🎯 Concept Revision Cheat Sheet
+
+| RPC Method | SafeX Purpose | Input | Output |
+| :--- | :--- | :--- | :--- |
+| **`eth_getBalance`** | Dashboard balance display | Address + Block Tag (`"latest"`) | Balance in hex Wei |
+| **`eth_getTransactionCount`** | Nonce calculation | Address + Block Tag (`"pending"`) | Next account nonce |
+| **`eth_estimateGas`** | Gas unit estimation | Partial Tx (`from`, `to`, `value`) | Gas units required (hex) |
+| **`eth_feeHistory`** | Base fee trend analysis | Block count + Percentiles | Base fees & priority fee rewards |
+| **`eth_maxPriorityFeePerGas`** | Validator tip recommendation | None | Recommended tip (hex Wei) |
+| **`eth_sendRawTransaction`** | Broadcast signed tx | RLP signed hex bytes | Transaction Hash (`txHash`) |
+| **`eth_getTransactionReceipt`** | Track confirmation | Transaction Hash (`txHash`) | `null` (pending) or Receipt object |
+| **`eth_call`** | Smart contract read | Target address + Call data | Raw return bytes |
