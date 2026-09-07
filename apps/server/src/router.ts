@@ -1,9 +1,9 @@
 import { healthRouter } from './features/health/routers/health.router.js'
-import { authRouter } from './features/auth/auth.router.js'
+import { walletRouter } from './features/wallet/wallet.router.js'
 
 export const appRouter = {
   health: healthRouter,
-  auth: authRouter,
+  wallet: walletRouter,
 }
 
 export type AppRouter = typeof appRouter

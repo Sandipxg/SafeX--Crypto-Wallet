@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Key, Eye, EyeOff, Lock, AlertTriangle, Shield, Trash2, Check, Clock } from 'lucide-react'
 import { useVaultStore } from '@/lib/store/useVaultStore'
-import { unlockVault } from '@/lib/crypto/vault'
+import { unlockVault } from '@/lib/crypto'
 
 export default function SettingsPage() {
   const router = useRouter()

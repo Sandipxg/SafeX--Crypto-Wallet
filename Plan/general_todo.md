@@ -126,19 +126,19 @@ Logged-in user sees their real EVM and Bitcoin receiving addresses with scannabl
 
 ## Build — Backend
 
-- [ ] Raw EVM transaction builder & serializer
-- [ ] Offline transaction signer using the user's derived key
-- [ ] JSON-RPC provider client (Sepolia testnet)
-- [ ] Gas fee estimator (`maxFeePerGas`, `maxPriorityFeePerGas`)
-- [ ] Transaction broadcaster & receipt/confirmation poller
-- [ ] `getBalance`, `getTxHistory` endpoints
+- [x] Raw EVM transaction builder & serializer
+- [x] Offline transaction signer using the user's derived key
+- [x] JSON-RPC provider client (Sepolia testnet)
+- [x] Gas fee estimator (`maxFeePerGas`, `maxPriorityFeePerGas`)
+- [x] Transaction broadcaster & receipt/confirmation poller
+- [x] `getBalance`, `getTxHistory` endpoints
 
 ## Build — Frontend
 
-- [ ] **Wallet dashboard** — live native balance (ETH) for the selected chain
-- [ ] **Send screen** — address input, amount, live gas estimate, review step, sign & broadcast, pending → confirmed status
-- [ ] **Receive screen** — address + QR (reuse Phase 2 component)
-- [ ] **Transaction history list** — pending/confirmed states, link to block explorer
+- [x] **Wallet dashboard** — live native balance (ETH) for the selected chain
+- [x] **Send screen** — address input, amount, live gas estimate, review step, sign & broadcast, pending → confirmed status
+- [x] **Receive screen** — address + QR (reuse Phase 2 component)
+- [x] **Transaction history list** — pending/confirmed states, link to block explorer
 
 ## ✅ Definition of Done
 

@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { deriveKeyArgon2id } from '../kdf'
-import { encryptAESGCM, decryptAESGCM } from '../aes'
-import { InvalidPasswordError } from '../errors'
-import { generateEntropy } from '../entropy'
+import { deriveKeyArgon2id, encryptAESGCM, decryptAESGCM, InvalidPasswordError, generateEntropy } from '../index'
 
 describe('AES-256-GCM & Argon2id Vault Crypto Unit Tests', () => {
   const password = 'TestSecretPassword123!'

@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Shield, Lock, Unlock, Key, Settings, AlertCircle } from 'lucide-react'
+import { Shield, Lock, Unlock, Key, Settings, AlertCircle, Send, ArrowDownLeft, History, ExternalLink, RefreshCw } from 'lucide-react'
 import { useVaultStore } from '@/lib/store/useVaultStore'
-import { ChainSelector } from '@/app/components/ChainSelector'
-import { ReceiveCard } from '@/app/components/ReceiveCard'
+import { ChainSelector } from '@/components/ChainSelector'
+import { ReceiveCard } from '@/components/ReceiveCard'
+import { fetchWalletBalance } from '@/lib/crypto'
 
 export default function DashboardPage() {
   const {
@@ -23,9 +24,34 @@ export default function DashboardPage() {
   const [unlockError, setUnlockError] = useState<string | null>(null)
   const [isUnlocking, setIsUnlocking] = useState(false)
 
+  // Live balance state
+  const [ethBalance, setEthBalance] = useState<string | null>(null)
+  const [isFetchingBalance, setIsFetchingBalance] = useState(false)
+
   useEffect(() => {
     checkVaultExists()
   }, [checkVaultExists])
+
+  // Fetch live Sepolia ETH balance with direct RPC fallback
+  const fetchLiveBalance = async () => {
+    if (!activeAddress) return
+    setIsFetchingBalance(true)
+    try {
+      const balance = await fetchWalletBalance(activeAddress)
+      setEthBalance(balance)
+    } catch (err) {
+      console.error('[Dashboard] Balance query failed:', err)
+      setEthBalance('0.0000')
+    } finally {
+      setIsFetchingBalance(false)
+    }
+  }
+
+  useEffect(() => {
+    if (activeAddress) {
+      fetchLiveBalance()
+    }
+  }, [activeAddress])
 
   const handleUnlockSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -63,8 +89,8 @@ export default function DashboardPage() {
     )
   }
 
-  const evmAddressDisplay = activeAddress || '0x71C7656EC7ab88b098def1734b743b44628b36d2'
-  const btcAddressDisplay = activeBtcAddress || 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu'
+  const evmAddressDisplay = activeAddress || ''
+  const btcAddressDisplay = activeBtcAddress || ''
 
   return (
     <div className="max-w-5xl mx-auto py-6 space-y-8">
@@ -88,7 +114,6 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Reusable Chain Selector */}
           <ChainSelector value={activeChain} onChange={setActiveChain} />
 
           {vaultState === 'UNLOCKED' ? (
@@ -118,10 +143,61 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Balance & Action Buttons Card */}
+      <div className="p-6 rounded-2xl bg-dark-card border border-dark-border shadow-xl space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="space-y-1">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
+              Native Balance (Sepolia Testnet)
+            </span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-extrabold text-white font-mono">
+                {ethBalance !== null ? `${Number(ethBalance).toFixed(4)}` : '0.0000'}
+              </span>
+              <span className="text-sm font-bold text-emerald-400 font-mono">ETH</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={fetchLiveBalance}
+              disabled={isFetchingBalance}
+              className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
+              title="Refresh Balance"
+            >
+              <RefreshCw className={`w-4 h-4 ${isFetchingBalance ? 'animate-spin' : ''}`} />
+            </button>
+
+            <Link
+              href="/send"
+              className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition shadow-md shadow-emerald-600/20 flex items-center gap-2"
+            >
+              <Send className="w-4 h-4" />
+              <span>Send ETH</span>
+            </Link>
+
+            <Link
+              href="/receive"
+              className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition flex items-center gap-2"
+            >
+              <ArrowDownLeft className="w-4 h-4 text-emerald-400" />
+              <span>Receive</span>
+            </Link>
+
+            <Link
+              href="/history"
+              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition flex items-center gap-2"
+            >
+              <History className="w-4 h-4" />
+              <span>History</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+
       {/* Account Info Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
-          {/* EVM Address Card */}
           {(activeChain === 'ethereum' || activeChain === 'all') && (
             <ReceiveCard
               chainName="Ethereum (EVM)"
@@ -133,7 +209,6 @@ export default function DashboardPage() {
             />
           )}
 
-          {/* Bitcoin Native SegWit Card */}
           {(activeChain === 'bitcoin' || activeChain === 'all') && (
             <ReceiveCard
               chainName="Bitcoin Native SegWit"
@@ -144,24 +219,9 @@ export default function DashboardPage() {
               accentColor="amber"
             />
           )}
-
-          <div className="pt-2 grid grid-cols-2 gap-4">
-            <div className="p-3 rounded-xl bg-dark-bg/60 border border-dark-border/60">
-              <span className="text-[10px] text-slate-500 block">Session Status</span>
-              <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1 mt-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Authenticated
-              </span>
-            </div>
-
-            <div className="p-3 rounded-xl bg-dark-bg/60 border border-dark-border/60">
-              <span className="text-[10px] text-slate-500 block">Encryption Standard</span>
-              <span className="text-xs font-semibold text-slate-300 mt-0.5 block">Argon2id + AES-256-GCM</span>
-            </div>
-          </div>
         </div>
 
-        {/* Quick Lock / Unlock Card */}
+        {/* Unlock Vault Form */}
         <div id="unlock-section" className="p-6 rounded-2xl bg-dark-card border border-dark-border flex flex-col justify-between space-y-4 shadow-xl">
           {vaultState === 'UNLOCKED' ? (
             <div className="space-y-4 my-auto text-center">
@@ -171,7 +231,7 @@ export default function DashboardPage() {
               <div className="space-y-1">
                 <h3 className="text-sm font-bold text-white">Vault Unlocked</h3>
                 <p className="text-xs text-slate-400">
-                  Decrypted in active RAM. Auto-locks after 10 minutes of inactivity.
+                  Decrypted in active RAM memory. Ready for signing.
                 </p>
               </div>
               <button
@@ -223,4 +283,3 @@ export default function DashboardPage() {
     </div>
   )
 }
-

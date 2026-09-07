@@ -1,6 +1,5 @@
 import { create } from 'zustand'
-import { VaultState } from '../crypto/types'
-import { unlockVault, hasVault as checkHasVault, destroyVault } from '../crypto/vault'
+import { VaultState, unlockVault, hasVault as checkHasVault, destroyVault, loadVaultRecord } from '../crypto'
 
 interface VaultStoreState {
   vaultState: VaultState
@@ -58,8 +57,18 @@ export const useVaultStore = create<VaultStoreState>((set, get) => ({
   autoLockTimeoutId: null,
 
   checkVaultExists: async () => {
-    const exists = await checkHasVault()
-    set({ hasVaultInStorage: exists })
+    const record = await loadVaultRecord()
+    const exists = !!record
+    if (record) {
+      set({
+        hasVaultInStorage: true,
+        activeAddress: record.address || get().activeAddress,
+        activeBtcAddress: record.btcAddress || get().activeBtcAddress,
+        activePublicKey: record.publicKey || get().activePublicKey,
+      })
+    } else {
+      set({ hasVaultInStorage: false })
+    }
     return exists
   },
 

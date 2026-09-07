@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { deriveBtcIdentity } from '../btc'
+import { deriveBtcIdentity } from '../index'
 
 describe('Bitcoin Native SegWit (BIP-84) Derivation', () => {
   it('should derive a valid Native SegWit bc1q... address for official BIP39 vector', () => {

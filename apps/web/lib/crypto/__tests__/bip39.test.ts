@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { generateMnemonic, validateMnemonic, normalizeMnemonic, mnemonicToSeed, deriveWalletIdentity } from '../bip39'
+import { generateMnemonic, validateMnemonic, normalizeMnemonic, mnemonicToSeed, deriveWalletIdentity } from '../index'
 
 describe('BIP39 Cryptographic Utilities', () => {
   it('should generate a valid 12-word mnemonic phrase (128-bit entropy)', () => {

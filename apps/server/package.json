@@ -19,7 +19,8 @@
     "jsonwebtoken": "^9.0.3",
     "orchid-orm": "latest",
     "pg": "^8.11.5",
-    "rake-db": "latest"
+    "rake-db": "latest",
+    "viem": "^2.55.19"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",
