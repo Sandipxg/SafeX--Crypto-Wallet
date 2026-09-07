@@ -8,12 +8,14 @@ interface VaultStoreState {
   activeAddress: `0x${string}` | null
   activeBtcAddress: string | null
   activePublicKey: `0x${string}` | null
+  activeChainId: 1 | 11155111
   autoLockTimeoutId: NodeJS.Timeout | number | null
 
   // Actions
   checkVaultExists: () => Promise<boolean>
   unlock: (password: string) => Promise<void>
   lock: () => void
+  setActiveChainId: (chainId: 1 | 11155111) => void
   setSessionCredentials: (address: `0x${string}`, btcAddress: string, publicKey: `0x${string}`, mnemonic?: string) => void
   resetAutoLockTimer: () => void
   wipeVault: () => Promise<void>
@@ -54,20 +56,31 @@ export const useVaultStore = create<VaultStoreState>((set, get) => ({
   activeAddress: null,
   activeBtcAddress: null,
   activePublicKey: null,
+  activeChainId: 11155111,
   autoLockTimeoutId: null,
+
+  setActiveChainId: (chainId: 1 | 11155111) => {
+    set({ activeChainId: chainId })
+  },
 
   checkVaultExists: async () => {
     const record = await loadVaultRecord()
     const exists = !!record
     if (record) {
+      const isUnlocked = get().vaultState === 'UNLOCKED'
       set({
         hasVaultInStorage: true,
-        activeAddress: record.address || get().activeAddress,
-        activeBtcAddress: record.btcAddress || get().activeBtcAddress,
-        activePublicKey: record.publicKey || get().activePublicKey,
+        activeAddress: isUnlocked ? (record.address || get().activeAddress) : null,
+        activeBtcAddress: isUnlocked ? (record.btcAddress || get().activeBtcAddress) : null,
+        activePublicKey: isUnlocked ? (record.publicKey || get().activePublicKey) : null,
       })
     } else {
-      set({ hasVaultInStorage: false })
+      set({
+        hasVaultInStorage: false,
+        activeAddress: null,
+        activeBtcAddress: null,
+        activePublicKey: null,
+      })
     }
     return exists
   },
@@ -134,6 +147,9 @@ export const useVaultStore = create<VaultStoreState>((set, get) => ({
     set({
       vaultState: 'LOCKED',
       decryptedMnemonic: null,
+      activeAddress: null,
+      activeBtcAddress: null,
+      activePublicKey: null,
       autoLockTimeoutId: null,
     })
   },

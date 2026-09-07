@@ -38,11 +38,14 @@ export const walletRouter = {
     chainId?: number
   }) {
     // Stateless RPC Broadcast — ZERO server database writes
-    const hash = await broadcastRawTransaction({ signedHex: input.signedHex })
+    const hash = await broadcastRawTransaction({
+      signedHex: input.signedHex,
+      chainId: input.chainId ?? 11155111,
+    })
     return { hash, status: 'broadcasted' }
   },
 
   async getTxReceipt(input: { hash: string; chainId?: number }) {
-    return await getTransactionReceiptDetails(input.hash)
+    return await getTransactionReceiptDetails(input.hash, input.chainId ?? 11155111)
   },
 }

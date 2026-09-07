@@ -1,4 +1,3 @@
-'use me'
 'use client'
 
 import React from 'react'
@@ -8,16 +7,17 @@ export interface ChainOption {
   id: string
   name: string
   symbol: string
+  chainId?: number
   iconBadge?: string
   disabled?: boolean
 }
 
 export const DEFAULT_CHAINS: ChainOption[] = [
-  { id: 'ethereum', name: 'Ethereum', symbol: 'ETH', iconBadge: 'Ξ' },
-  { id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC', iconBadge: '₿' },
+  { id: 'sepolia', name: 'Sepolia Testnet', symbol: 'ETH', chainId: 11155111, iconBadge: '🧪' },
+  { id: 'ethereum', name: 'Ethereum Mainnet', symbol: 'ETH', chainId: 1, iconBadge: 'Ξ' },
+  { id: 'bitcoin', name: 'Bitcoin SegWit', symbol: 'BTC', iconBadge: '₿' },
   { id: 'polygon', name: 'Polygon', symbol: 'MATIC', iconBadge: 'MATIC', disabled: true },
   { id: 'arbitrum', name: 'Arbitrum', symbol: 'ARB', iconBadge: 'ARB', disabled: true },
-  { id: 'base', name: 'Base', symbol: 'BASE', iconBadge: 'BASE', disabled: true },
 ]
 
 interface ChainSelectorProps {

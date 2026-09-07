@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Send, ArrowLeft, Shield, AlertCircle, CheckCircle2, Loader2, ExternalLink, Lock } from 'lucide-react'
+import { Send, ArrowLeft, Shield, AlertCircle, CheckCircle2, Loader2, ExternalLink, Lock, DollarSign } from 'lucide-react'
 import { useVaultStore } from '@/lib/store/useVaultStore'
 import {
   buildUnsignedTransaction,
@@ -10,14 +10,17 @@ import {
   fetchTxReceiptStatus,
   UnsignedEip1559Request,
 } from '@/lib/crypto'
+import { fetchMarketPrices, MarketPrices } from '@/lib/services/priceService'
+import { VaultGate } from '@/components/VaultGate'
 
 export default function SendPage() {
-  const { activeAddress } = useVaultStore()
+  const { activeAddress, activeChainId } = useVaultStore()
 
   const [step, setStep] = useState<1 | 2 | 3>(1)
   const [recipient, setRecipient] = useState('')
   const [amountEth, setAmountEth] = useState('')
   const [passwordInput, setPasswordInput] = useState('')
+  const [marketPrices, setMarketPrices] = useState<MarketPrices | null>(null)
 
   // Transaction request & gas estimation state
   const [isEstimatingGas, setIsEstimatingGas] = useState(false)
@@ -35,6 +38,11 @@ export default function SendPage() {
   const [broadcastTxHash, setBroadcastTxHash] = useState<string | null>(null)
   const [txStatus, setTxStatus] = useState<'broadcasted' | 'pending' | 'confirmed' | 'failed' | 'dropped'>('broadcasted')
 
+  // Fetch ETH market price rate on load
+  useEffect(() => {
+    fetchMarketPrices().then(setMarketPrices).catch(console.warn)
+  }, [])
+
   // Live gas estimation effect when recipient & amount change
   useEffect(() => {
     if (!activeAddress || !recipient || !amountEth || isNaN(Number(amountEth)) || Number(amountEth) <= 0) {
@@ -51,6 +59,7 @@ export default function SendPage() {
           from: activeAddress as `0x${string}`,
           to: recipient as `0x${string}`,
           valueEth: amountEth,
+          chainId: activeChainId,
         })
 
         setPreparedTxRequest(txRequest)
@@ -66,7 +75,7 @@ export default function SendPage() {
 
     const timer = setTimeout(prepareTx, 500)
     return () => clearTimeout(timer)
-  }, [activeAddress, recipient, amountEth])
+  }, [activeAddress, recipient, amountEth, activeChainId])
 
   // Step 1 -> Step 2 Review
   const handleProceedToReview = (e: React.FormEvent) => {
@@ -126,8 +135,13 @@ export default function SendPage() {
     return () => clearInterval(pollInterval)
   }, [step, broadcastTxHash])
 
+  const isMainnet = activeChainId === 1
+  const ethPrice = marketPrices?.ethereumUsd || 2500
+  const usdAmount = amountEth && !isNaN(Number(amountEth)) ? (Number(amountEth) * ethPrice).toFixed(2) : null
+
   return (
-    <div className="max-w-2xl mx-auto py-8 space-y-6">
+    <VaultGate>
+      <div className="max-w-2xl mx-auto py-8 space-y-6">
       <Link
         href="/dashboard"
         className="inline-flex items-center gap-2 text-xs text-slate-400 hover:text-white transition"
@@ -139,16 +153,18 @@ export default function SendPage() {
       <div className="p-6 rounded-2xl bg-dark-card border border-dark-border space-y-2 shadow-xl">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <div className={`p-2.5 rounded-xl border ${isMainnet ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
               <Send className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">Send Sepolia ETH</h1>
+              <h1 className="text-xl font-bold text-white">
+                Send {isMainnet ? 'Ethereum (Mainnet)' : 'Sepolia ETH'}
+              </h1>
               <p className="text-xs text-slate-400">Local-First Client Transaction Signer (Trust Wallet Pattern)</p>
             </div>
           </div>
-          <span className="text-xs px-2.5 py-1 rounded-full font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
-            Sepolia Testnet
+          <span className={`text-xs px-2.5 py-1 rounded-full font-mono font-semibold border ${isMainnet ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
+            {isMainnet ? 'Ξ Ethereum Mainnet' : '🧪 Sepolia Testnet'}
           </span>
         </div>
       </div>
@@ -181,7 +197,14 @@ export default function SendPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-300">Amount (ETH)</label>
+            <div className="flex justify-between items-center">
+              <label className="text-xs font-semibold text-slate-300">Amount (ETH)</label>
+              {usdAmount && (
+                <span className="text-[11px] font-medium text-emerald-400 font-mono">
+                  ≈ ${usdAmount} USD
+                </span>
+              )}
+            </div>
             <input
               type="number"
               step="0.0001"
@@ -213,7 +236,7 @@ export default function SendPage() {
               </div>
               <div className="flex justify-between font-semibold text-emerald-400 pt-1 border-t border-dark-border">
                 <span>Account Nonce:</span>
-                <span className="font-mono">#{pendingNonce}</span>
+                <span className="font-mono">#{preparedTxRequest?.nonce ?? 0}</span>
               </div>
             </div>
           ) : null}
@@ -247,7 +270,12 @@ export default function SendPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Transfer Amount:</span>
-                <span className="font-mono font-bold text-white">{amountEth} ETH</span>
+                <div className="text-right">
+                  <span className="font-mono font-bold text-white block">{amountEth} ETH</span>
+                  {usdAmount && (
+                    <span className="text-[10px] text-slate-400 block font-mono">≈ ${usdAmount} USD</span>
+                  )}
+                </div>
               </div>
               <div className="flex justify-between border-t border-dark-border pt-2 text-slate-400">
                 <span>Estimated Max Gas Fee:</span>
@@ -310,7 +338,7 @@ export default function SendPage() {
           <div className="space-y-2">
             <h2 className="text-lg font-bold text-white">
               {txStatus === 'confirmed'
-                ? 'Transaction Confirmed on Sepolia!'
+                ? `Transaction Confirmed on ${isMainnet ? 'Ethereum Mainnet' : 'Sepolia'}!`
                 : 'Saved to Device IndexedDB — Broadcasted'}
             </h2>
             <p className="text-xs text-slate-400">
@@ -327,12 +355,12 @@ export default function SendPage() {
 
           <div className="pt-2 flex flex-col gap-3">
             <a
-              href={`https://sepolia.etherscan.io/tx/${broadcastTxHash}`}
+              href={isMainnet ? `https://etherscan.io/tx/${broadcastTxHash}` : `https://sepolia.etherscan.io/tx/${broadcastTxHash}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
             >
-              <span>View on Etherscan Sepolia</span>
+              <span>View on {isMainnet ? 'Etherscan Mainnet' : 'Etherscan Sepolia'}</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
 
@@ -345,6 +373,7 @@ export default function SendPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </VaultGate>
   )
 }

@@ -1,5 +1,5 @@
 import { parseEther } from 'viem'
-import { publicClient } from '../client/publicClient.js'
+import { getPublicClient } from '../client/publicClient.js'
 import { validateEvmAddress } from '../utils/address.js'
 
 export interface GasEstimateResult {
@@ -20,12 +20,13 @@ export async function estimateGasFees(
   const validFrom = validateEvmAddress(from)
   const validTo = validateEvmAddress(to)
   const valueWei = parseEther(valueEth || '0')
+  const client = getPublicClient(chainId)
 
   // Fetch current network EIP-1559 base fee + priority tip estimate
-  const fees = await publicClient.estimateFeesPerGas()
+  const fees = await client.estimateFeesPerGas()
 
   // Simulate EVM dry-run execution to estimate required gas units
-  const gasUnits = await publicClient.estimateGas({
+  const gasUnits = await client.estimateGas({
     account: validFrom,
     to: validTo,
     value: valueWei,

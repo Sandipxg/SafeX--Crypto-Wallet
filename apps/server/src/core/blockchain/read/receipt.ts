@@ -1,4 +1,4 @@
-import { publicClient } from '../client/publicClient.js'
+import { getPublicClient } from '../client/publicClient.js'
 
 export interface ReceiptDetails {
   status: 'confirmed' | 'failed' | 'pending'
@@ -9,10 +9,12 @@ export interface ReceiptDetails {
 }
 
 export async function getTransactionReceiptDetails(
-  txHash: string
+  txHash: string,
+  chainId: number = 11155111
 ): Promise<ReceiptDetails> {
   try {
-    const receipt = await publicClient.getTransactionReceipt({
+    const client = getPublicClient(chainId)
+    const receipt = await client.getTransactionReceipt({
       hash: txHash as `0x${string}`,
     })
 

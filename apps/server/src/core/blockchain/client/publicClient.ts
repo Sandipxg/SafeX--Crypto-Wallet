@@ -1,8 +1,8 @@
 import { createPublicClient, http, fallback, PublicClient } from 'viem'
-import { sepolia } from 'viem/chains'
+import { sepolia, mainnet } from 'viem/chains'
 import { config } from '../../config/env.js'
 
-export const publicClient: PublicClient = createPublicClient({
+export const sepoliaPublicClient: PublicClient = createPublicClient({
   chain: sepolia,
   transport: fallback([
     http(config.sepoliaRpcUrl),
@@ -10,3 +10,23 @@ export const publicClient: PublicClient = createPublicClient({
     http('https://sepolia.drpc.org'),
   ]),
 })
+
+export const mainnetPublicClient: PublicClient = createPublicClient({
+  chain: mainnet,
+  transport: fallback([
+    http('https://eth.llamarpc.com'),
+    http('https://rpc.ankr.com/eth'),
+    http('https://cloudflare-eth.com'),
+  ]),
+})
+
+export function getPublicClient(chainId: number = 11155111): PublicClient {
+  if (chainId === 1) {
+    return mainnetPublicClient
+  }
+  return sepoliaPublicClient
+}
+
+// Backward compatibility export
+export const publicClient = sepoliaPublicClient
+

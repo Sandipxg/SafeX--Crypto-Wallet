@@ -68,9 +68,9 @@ export async function buildUnsignedTransaction(
 }
 
 import { createPublicClient, http, fallback, formatEther } from 'viem'
-import { sepolia } from 'viem/chains'
+import { sepolia, mainnet } from 'viem/chains'
 
-const browserFallbackClient = createPublicClient({
+const browserSepoliaFallbackClient = createPublicClient({
   chain: sepolia,
   transport: fallback([
     http('https://rpc.sepolia.org'),
@@ -79,21 +79,34 @@ const browserFallbackClient = createPublicClient({
   ]),
 })
 
+const browserMainnetFallbackClient = createPublicClient({
+  chain: mainnet,
+  transport: fallback([
+    http('https://eth.llamarpc.com'),
+    http('https://rpc.ankr.com/eth'),
+    http('https://cloudflare-eth.com'),
+  ]),
+})
+
 /**
  * ============================================================================
- * fetchWalletBalance(address): Promise<string>
+ * fetchWalletBalance(address, chainId): Promise<string>
  * ============================================================================
- * @description Highly resilient balance fetcher:
+ * @description Highly resilient balance fetcher for Mainnet & Sepolia:
  *              1. Attempts server oRPC query first.
- *              2. Automatically falls back to direct browser Sepolia RPC lookup if server fails.
+ *              2. Automatically falls back to direct browser RPC lookup if server fails.
  */
-export async function fetchWalletBalance(address: `0x${string}`): Promise<string> {
+export async function fetchWalletBalance(
+  address: `0x${string}`,
+  chainId: number = 11155111
+): Promise<string> {
   try {
-    const res = await orpc.wallet.getBalance({ walletAddress: address })
+    const res = await orpc.wallet.getBalance({ walletAddress: address, chainId })
     return res.formattedEth
   } catch (serverError) {
-    console.warn('[SafeX Client] Server oRPC balance fetch failed, querying Sepolia RPC directly:', serverError)
-    const balanceWei = await browserFallbackClient.getBalance({ address })
+    console.warn('[SafeX Client] Server oRPC balance fetch failed, querying RPC directly:', serverError)
+    const client = chainId === 1 ? browserMainnetFallbackClient : browserSepoliaFallbackClient
+    const balanceWei = await client.getBalance({ address })
     return formatEther(balanceWei)
   }
 }
