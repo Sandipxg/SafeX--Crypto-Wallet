@@ -1,3 +1,4 @@
+import { os } from '@orpc/server'
 import { getBalance } from '../../core/blockchain/read/balance.js'
 import { getPendingNonce } from '../../core/blockchain/read/nonce.js'
 import { estimateGasFees } from '../../core/blockchain/read/gas.js'
@@ -6,24 +7,24 @@ import { broadcastRawTransaction } from '../../core/blockchain/write/broadcast.j
 import { validateEvmAddress } from '../../core/blockchain/utils/address.js'
 
 export const walletRouter = {
-  async getBalance(input: { walletAddress: string; chainId?: number }) {
+  getBalance: os.handler(async (input: { walletAddress: string; chainId?: number }) => {
     const validAddress = validateEvmAddress(input.walletAddress)
     return await getBalance(validAddress, input.chainId ?? 11155111)
-  },
+  }),
 
-  async getNonce(input: { walletAddress: string; chainId?: number }) {
+  getNonce: os.handler(async (input: { walletAddress: string; chainId?: number }) => {
     const validAddress = validateEvmAddress(input.walletAddress)
     const nonce = await getPendingNonce(validAddress, input.chainId ?? 11155111)
     return { nonce }
-  },
+  }),
 
-  async getGasEstimate(input: {
+  getGasEstimate: os.handler(async (input: {
     from: string
     to: string
     valueEth?: string
     data?: `0x${string}`
     chainId?: number
-  }) {
+  }) => {
     return await estimateGasFees(
       input.from,
       input.to,
@@ -31,21 +32,22 @@ export const walletRouter = {
       input.data ?? '0x',
       input.chainId ?? 11155111
     )
-  },
+  }),
 
-  async broadcastTx(input: {
+  broadcastTx: os.handler(async (input: {
     signedHex: `0x${string}`
     chainId?: number
-  }) {
+  }) => {
     // Stateless RPC Broadcast — ZERO server database writes
     const hash = await broadcastRawTransaction({
       signedHex: input.signedHex,
       chainId: input.chainId ?? 11155111,
     })
     return { hash, status: 'broadcasted' }
-  },
+  }),
 
-  async getTxReceipt(input: { hash: string; chainId?: number }) {
+  getTxReceipt: os.handler(async (input: { hash: string; chainId?: number }) => {
     return await getTransactionReceiptDetails(input.hash, input.chainId ?? 11155111)
-  },
+  }),
 }
+

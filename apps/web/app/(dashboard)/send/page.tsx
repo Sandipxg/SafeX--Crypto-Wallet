@@ -65,7 +65,12 @@ export default function SendPage() {
         setPreparedTxRequest(txRequest)
         setGasEstimate(gasSummary)
       } catch (err: any) {
-        setErrorMsg(err.message || 'Failed to estimate gas or validate recipient address.')
+        const rawMsg = err.message || ''
+        if (rawMsg.toLowerCase().includes('insufficient funds')) {
+          setErrorMsg('Insufficient balance in wallet to cover amount and gas fees.')
+        } else {
+          setErrorMsg(rawMsg || 'Failed to estimate gas or validate recipient address.')
+        }
         setGasEstimate(null)
         setPreparedTxRequest(null)
       } finally {
@@ -110,7 +115,12 @@ export default function SendPage() {
       setStep(3)
       setPasswordInput('')
     } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to sign or broadcast transaction.')
+      const rawMsg = err.message || ''
+      if (rawMsg.toLowerCase().includes('insufficient funds')) {
+        setErrorMsg('Network rejected transaction: Insufficient balance for value + gas fee.')
+      } else {
+        setErrorMsg(rawMsg || 'Failed to sign or broadcast transaction.')
+      }
     } finally {
       setIsSigningAndSending(false)
     }
@@ -122,7 +132,7 @@ export default function SendPage() {
 
     const pollInterval = setInterval(async () => {
       try {
-        const status = await fetchTxReceiptStatus(broadcastTxHash)
+        const status = await fetchTxReceiptStatus(broadcastTxHash, activeChainId)
         if (status !== 'pending') {
           setTxStatus(status)
           clearInterval(pollInterval)

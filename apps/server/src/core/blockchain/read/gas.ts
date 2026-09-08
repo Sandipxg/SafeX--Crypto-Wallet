@@ -26,12 +26,22 @@ export async function estimateGasFees(
   const fees = await client.estimateFeesPerGas()
 
   // Simulate EVM dry-run execution to estimate required gas units
-  const gasUnits = await client.estimateGas({
-    account: validFrom,
-    to: validTo,
-    value: valueWei,
-    data,
-  })
+  let gasUnits: bigint
+  try {
+    gasUnits = await client.estimateGas({
+      account: validFrom,
+      to: validTo,
+      value: valueWei,
+      data,
+    })
+  } catch {
+    // If dry-run fails (e.g. low balance or simulation block), standard native transfers always consume 21,000 gas units
+    if (data === '0x' || !data) {
+      gasUnits = 21000n
+    } else {
+      gasUnits = 100000n
+    }
+  }
 
   const maxFee = fees.maxFeePerGas ?? 35000000000n
   const priorityFee = fees.maxPriorityFeePerGas ?? 2000000000n

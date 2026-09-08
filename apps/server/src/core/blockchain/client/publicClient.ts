@@ -14,6 +14,7 @@ export const sepoliaPublicClient: PublicClient = createPublicClient({
 export const mainnetPublicClient: PublicClient = createPublicClient({
   chain: mainnet,
   transport: fallback([
+    http(config.mainnetRpcUrl),
     http('https://eth.llamarpc.com'),
     http('https://rpc.ankr.com/eth'),
     http('https://cloudflare-eth.com'),
@@ -29,4 +30,3 @@ export function getPublicClient(chainId: number = 11155111): PublicClient {
 
 // Backward compatibility export
 export const publicClient = sepoliaPublicClient
-
