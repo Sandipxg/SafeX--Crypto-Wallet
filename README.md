@@ -97,7 +97,7 @@ SafeX---Crypto-Wallet/
 | **API Transport** | `oRPC` (Client & Server) | End-to-end type-safe RPC communication |
 | **Backend Runtime** | `Node.js` + `Express` + `TypeScript` | Business logic, session cookies, auth router |
 | **Database & ORM** | `PostgreSQL 16` + `Orchid ORM` | ACID transaction storage, user wallet records |
-| **Crypto & Vault Core** | `@noble/hashes` + `@scure/bip32` + `@scure/base` + `viem` | Argon2id KDF, AES-256-GCM, BIP39, BIP84, RAM zeroization |
+| **Crypto & Blockchain** | `@noble/hashes` + `@scure/bip32` + `@scure/base` + `viem` | Argon2id KDF, AES-256-GCM, BIP-39, BIP-84, multi-provider JSON-RPC failover |
 | **Infrastructure** | `Docker Compose` | Local PostgreSQL service management |
 
 ---
@@ -127,18 +127,43 @@ Make sure you have the following installed on your machine:
    ```
 
 3. **Configure Environment Variables:**
-   Create a `.env` file inside `apps/server/` based on the example:
-   ```bash
-   cp apps/server/.env.example apps/server/.env
-   ```
 
-   Default configuration (`apps/server/.env`):
-   ```env
-   PORT=4000
-   NODE_ENV=development
-   DATABASE_URL=postgresql://safex:safexpassword@localhost:5435/safex_db
-   CORS_ORIGIN=http://localhost:3000
-   ```
+   * **Backend Server (`apps/server/.env`)**:
+     ```bash
+     cp apps/server/.env.example apps/server/.env
+     ```
+     Default server configuration:
+     ```env
+     PORT=4000
+     NODE_ENV=development
+     DATABASE_URL=postgresql://safex:safexpassword@localhost:5435/safex_db
+     CORS_ORIGIN=http://localhost:3000
+
+     # Blockchain JSON-RPC Providers (Sepolia Testnet & Ethereum Mainnet)
+     SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
+     MAINNET_RPC_URL=https://eth.llamarpc.com
+     ```
+
+   * **Frontend Web (`apps/web/.env.local`)**:
+     ```bash
+     cp apps/web/.env.example apps/web/.env.local
+     ```
+     Default frontend configuration:
+     ```env
+     NEXT_PUBLIC_API_URL=http://localhost:4000
+     NEXT_PUBLIC_SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
+     NEXT_PUBLIC_MAINNET_RPC_URL=https://eth.llamarpc.com
+     ```
+
+4. **Blockchain RPC Node Providers (Alchemy / Infura / QuickNode):**
+   * By default, SafeX uses resilient **public fallback pools**:
+     * **Sepolia**: [PublicNode](https://publicnode.com/), [dRPC](https://drpc.org/), and Ethereum Foundation public node (`rpc.sepolia.org`).
+     * **Mainnet**: [LlamaRPC](https://llamarpc.com/), [Ankr](https://www.ankr.com/), and [Cloudflare](https://cloudflare-eth.com/).
+   * To use dedicated private node infrastructure (e.g. **Alchemy** or **Infura**), update `SEPOLIA_RPC_URL` and `MAINNET_RPC_URL` in your `.env` and `.env.local` files:
+     ```env
+     SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY
+     MAINNET_RPC_URL=https://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY
+     ```
 
 ---
 
