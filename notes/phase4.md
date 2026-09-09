@@ -52,6 +52,11 @@ World State (Global State Trie)
 | **`to` Field in Tx** | Recipient wallet address | Token contract address |
 | **`value` Field in Tx**| Amount of native Wei transferred | `0` Wei (token quantity is encoded in `data`) |
 
+> [!WARNING]
+> **Architecture Infographic Reference:**
+> - [Complete Transaction Lifecycle](./infographics/complete_transaction_lifecycle.png): End-to-end visualization of how native vs. smart contract transactions transition from wallet construction through the mempool to state execution.
+> - [EIP-1559 Transaction Anatomy](./infographics/eip1559_transaction_anatomy.png): Visual dissection of the Type-2 envelope contrasting native value transfers (`value > 0`, `data = 0x`) with ERC-20 contract calls (`value = 0`, `data = 4-byte selector + params`).
+
 ### 1.3 Why Native ETH Is Not an ERC-20 Token & What is WETH
 The ERC-20 token standard was finalized in 2015 (EIP-20). Native ETH existed before ERC-20 was standardized. 
 - Because native ETH does not implement the ERC-20 interface methods (`transfer`, `transferFrom`, `approve`, `allowance`), decentralized protocols (e.g. Uniswap, Aave) cannot handle ETH using the same code path they use for tokens.
@@ -103,6 +108,10 @@ Resulting Calldata:
 ```
 Total calldata length: Exactly $4 + 32 + 32 = 68$ bytes.
 
+> [!WARNING]
+> **Architecture Infographic Reference:**
+> - [Sender Address Recovery from Transaction Bytes](./infographics/How_ethereum_recover_senderAddress_from_transactionObjectBytes.png): Step-by-step visual proof demonstrating how the EVM decodes raw RLP calldata bytes and recovers the signer's identity without an explicit `from` field in the payload.
+
 ---
 
 ## 3. ERC-20 State Architecture & Core Interface
@@ -149,6 +158,11 @@ interface IERC20 {
     event Approval(address indexed owner, address indexed spender, uint256 value);
 }
 ```
+
+> [!WARNING]
+> **Architecture Infographic Reference:**
+> - [Viem & JSON-RPC Execution Methods](./infographics/viem_jsonRpc_methods.png): Visual architecture map showing read-only calls (`eth_call` for `balanceOf`, `allowance`, `decimals`) vs. state-modifying broadcast (`eth_sendRawTransaction` for `transfer`).
+> - [SafeX Multi-Tier RPC Architecture](./infographics/safex_rpc_architecture.png): Resilient client-to-blockchain failover pipeline used by SafeX to route contract interactions without downtime.
 
 ### 3.3 Low-Level Execution Trace of `transfer`
 When a validator executes an ERC-20 `transfer(to, amount)`:
@@ -220,6 +234,11 @@ function permit(
 2. The user passes this `(v, r, s)` signature to the target protocol (e.g. Router).
 3. The protocol submits the signature directly in its single transaction (`router.swapWithPermit(...)`).
 4. Inside the transaction, the contract calls `token.permit(...)`, which verifies the signer via `ecrecover` and updates the allowance in the same atomic execution.
+
+> [!WARNING]
+> **Architecture Infographic Reference:**
+> - [Message Hash vs. Transaction Hash](./infographics/message_hash_vs_transaction_hash.png): Essential architectural comparison contrasting EIP-712 typed structured message hashing (used in off-chain `permit` approvals) with raw EIP-1559 transaction hashing.
+> - [Transaction Signing & Recovery Pipeline](./infographics/transaction_signing_pipeline.png): Deep visual walk-through of ECDSA secp256k1 point math and signature generation generating the $(r, s, v)$ tuple.
 
 ---
 

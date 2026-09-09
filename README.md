@@ -1,240 +1,240 @@
-# 🛡️ SafeX — Next-Gen Crypto Wallet & Exchange Platform
+# 🛡️ SafeX — Zero-Trust, Non-Custodial Multi-Chain Web3 Wallet
 
-[![Node.js](https://img.shields.io/badge/Node.js-v20%2B-green.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue.svg)](https://www.typescriptlang.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-14.2-black.svg)](https://nextjs.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
-[![oRPC](https://img.shields.io/badge/API-oRPC-purple.svg)](https://orpc.unjs.io/)
-[![Argon2id](https://img.shields.io/badge/KDF-Argon2id-red.svg)](https://phc.winner)
-[![AES-256-GCM](https://img.shields.io/badge/Vault-AES--256--GCM-green.svg)](https://en.wikipedia.org/wiki/Galois/Counter_Mode)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Next.js](https://img.shields.io/badge/Next.js-14.2%20(App%20Router)-black.svg)](https://nextjs.org/)
+[![Viem](https://img.shields.io/badge/EVM%20Engine-Viem%202.x-black.svg)](https://viem.sh/)
+[![Argon2id](https://img.shields.io/badge/KDF-Argon2id%20(64MB)-red.svg)](https://en.wikipedia.org/wiki/Argon2)
+[![AES-256-GCM](https://img.shields.io/badge/Cipher-AES--256--GCM-green.svg)](https://en.wikipedia.org/wiki/Galois/Counter_Mode)
+[![EIP-1559](https://img.shields.io/badge/EVM%20Standard-EIP--1559-purple.svg)](https://eips.ethereum.org/EIPS/eip-1559)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**SafeX** is a high-performance, non-custodial crypto exchange and wallet platform built with an enterprise-grade monorepo architecture. It combines a zero-trust client-side encrypted vault, multi-chain address derivation (EVM + Bitcoin Native SegWit), real-time trading dashboards, double-entry accounting ledgers, and end-to-end type safety.
+> **SafeX** is an enterprise-grade, **100% non-custodial Web3 crypto wallet** built from fundamental cryptographic primitives. It provides client-side zero-trust security, multi-chain HD address derivation (EVM + Bitcoin Native SegWit), offline EIP-1559 transaction construction, and direct decentralized blockchain node interaction—**with zero central database storing your keys or balances**.
 
 ---
 
-## 🔐 Zero-Trust Client Cryptographic Vault Architecture
+## 🔒 The Zero-Trust Guarantee (Why No Central Database?)
 
-SafeX features a **non-custodial, client-side encrypted vault** where seed phrases and private keys never touch the backend server. All cryptographic operations occur exclusively in local browser memory.
+> [!IMPORTANT]
+> **True self-custody means zero server trust.** 
+> In authentic Web3 architecture, storing private keys, seed phrases, or user wallet balances in a centralized database (such as PostgreSQL or MongoDB) is a major anti-pattern and a critical security vulnerability. 
+> 
+> * **No Database for Wallets**: SafeX never records private keys, mnemonics, or balances to a server database.
+> * **Pure Client-Side Cryptography**: 100% of entropy generation, key derivation, and transaction signing occurs exclusively in the user's browser sandbox.
+> * **Direct Node Communication**: Signed raw bytecode is broadcast directly to decentralized Ethereum and Bitcoin JSON-RPC nodes.
+
+---
+
+## 📚 Deep-Dive Technical Handbooks & Architecture Infographics
+
+> [!TIP]
+> **For comprehensive architectural teardowns, mathematical proofs, and high-resolution diagrams, explore the [`/notes`](./notes) directory.**
+
+| Phase / Topic | Technical Focus & Engineering Scope | Handbook Link |
+| :--- | :--- | :--- |
+| **Phase 1** | CSPRNG Entropy, BIP-39 Mnemonics, PBKDF2, Argon2id KDF, AES-256-GCM Vault, RAM Zeroization | [📘 Phase 1 Handbook](./notes/phase1.md) |
+| **Phase 2** | EIP-1559 Transaction Anatomy, Gas Base Fee Burn, Priority Tips, ECDSA Secp256k1 Offline Signing | [📘 Phase 2 Handbook](./notes/phase2.md) |
+| **Phase 3** | Nonce Management, Mempool Race Conditions, Replacement & Cancellation, Block Confirmations | [📘 Phase 3 Handbook](./notes/phase3.md) |
+| **Phase 4** | Smart Contracts, 4-Byte EVM Calldata Selectors, ERC-20 Standard, Fixed-Point Arithmetic | [📘 Phase 4 Handbook](./notes/phase4.md) |
+| **Phase 5** | Blockchain Data Indexing, Blockscout REST API, Historical Ledger Caching, Activity Feeds | [📘 Phase 5 Handbook](./notes/phase5.md) |
+| **Math & Curves** | Secp256k1 Elliptic Curve Algebra, Discrete Logarithm Problem, Point Multiplication ($P = k \times G$) | [📘 Elliptic Curve Math](./notes/Maths_Eclliptic_curve.md) |
+| **Fundamentals** | Consensus Algorithms, Cryptographic Hashes, Peer-to-Peer Networks, Block Structures | [📘 Blockchain Core](./notes/fundamentals/blockchain.md) |
+
+### 🖼️ Featured Architecture Infographics
+High-resolution technical diagrams located in [`/notes/infographics`](./notes/infographics):
+* [Seed Phrase to Multi-Chain Address Pipeline](./notes/infographics/seedphraseTo_evm_btc_addresses.png)
+* [Complete EIP-1559 Transaction Lifecycle](./notes/infographics/complete_transaction_lifecycle.png)
+* [Offline ECDSA Signing & Public Key Recovery Tuple $(r, s, v)$](./notes/infographics/transaction_signing_pipeline.png)
+* [Sender Address Extraction from Raw Byte Stream](./notes/infographics/How_ethereum_recover_senderAddress_from_transactionObjectBytes.png)
+* [Resilient Multi-Tier JSON-RPC Architecture](./notes/infographics/safex_rpc_architecture.png)
+* [EIP-1559 Transaction Anatomy Breakdown](./notes/infographics/eip1559_transaction_anatomy.png)
+
+---
+
+## 🏛️ System Architecture: Pure Non-Custodial Flow
+
+All cryptographic operations occur on-device. The only external traffic is raw blockchain JSON-RPC calls.
 
 ```text
-┌────────────────────────────────────────────────────────────────────────┐
-│                              BROWSER (RAM & Local)                     │
-│                                                                        │
-│  [ Mnemonic (RAM) ] ──► [ Seed (RAM) ] ──► [ Multi-Chain Identity ]    │
-│                                            ├── EVM  (0x...)            │
-│                                            └── BTC  (bc1q...)          │
-│                                                                        │
-│  [ Password ] ──► [ Argon2id KDF (64MB) ] ──► [ AES-256-GCM Encrypt ] │
-│                                                          │             │
-│                                                          ▼             │
-│                                           [ IndexedDB Vault Record ]   │
-└────────────────────────────────────────────────────────────────────────┘
-                                   │
-                                   =======================================
-                                          TRUST & SECURITY BOUNDARY
-                                   =======================================
-                                   │ (Public Addresses & Public Keys Only)
-                                   ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                              BACKEND (Node.js & Postgres)              │
-│                                                                        │
-│   oRPC Auth Router ──► JWT (HttpOnly Cookie) ──► DB User/Wallet Record │
-└────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                               CLIENT BROWSER SANDBOX                                   │
+│                                                                                        │
+│   [ Entropy (CSPRNG) ] ──► [ BIP-39 Mnemonic ] ──► [ PBKDF2 ] ──► [ 512-bit Root Seed ]│
+│                                                                          │             │
+│                 ┌────────────────────────────────────────────────────────┴──────┐      │
+│                 ▼ (BIP-44: m/44'/60'/0'/0/0)        ▼ (BIP-84: m/84'/0'/0'/0/0) │      │
+│         [ EVM Private Key ]                 [ BTC Private Key ]                 │      │
+│                 │                                   │                           │      │
+│         [ Secp256k1 Point Mult ]            [ Secp256k1 Point Mult ]            │      │
+│                 │                                   │                           │      │
+│         [ Keccak-256 + EIP-55 ]             [ HASH160 + Bech32 Encoding ]       │      │
+│                 ▼                                   ▼                           │      │
+│        Ethereum (0x5de9...Ac)              Bitcoin Native SegWit (bc1q...3x)    │      │
+│                                                                                        │
+│   ┌────────────────────────────────────────────────────────────────────────────────┐   │
+│   │ Client-Side Vault Security (Zero Server Knowledge):                            │   │
+│   │ • Master Password ──► Argon2id KDF (64MB RAM, 3 iterations) ──► 256-bit Key     │   │
+│   │ • Plaintext Mnemonic ──► AES-256-GCM Authenticated Encryption ──► IndexedDB    │   │
+│   │ • Tab Session Cache: Ephemeral sessionStorage with 10-min rolling timer         │   │
+│   │ • Memory Protection: buffer.fill(0) active RAM zeroization on lock/timeout     │   │
+│   └────────────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                        │
+│   ┌────────────────────────────────────────────────────────────────────────────────┐   │
+│   │ Offline Transaction Signing (secp256k1):                                       │   │
+│   │ [ Unsigned EIP-1559 Tx ] ──► [ Sign with PrivKey in RAM ] ──► [ Signed Hex ]    │   │
+│   └──────────────────────────────────────┬─────────────────────────────────────────┘   │
+└──────────────────────────────────────────┼─────────────────────────────────────────────┘
+                                           │ Direct JSON-RPC (eth_sendRawTransaction)
+                                           ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                        DECENTRALIZED BLOCKCHAIN NODES                                  │
+│                                                                                        │
+│   ┌─────────────────────────────┐               ┌──────────────────────────────────┐   │
+│   │ Ethereum Mainnet / Sepolia  │               │ Bitcoin SegWit Network           │   │
+│   │ • Viem JSON-RPC Multi-Pool  │               │ • Blockstream / Mempool.space    │   │
+│   │ • Gas Oracle & Nonce Sync   │               │ • UTXO Tracking & Fee Estimator  │   │
+│   └─────────────────────────────┘               └──────────────────────────────────┘   │
+└────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Key Security Features:
-* **Memory-Hard Key Derivation**: User password is key-derived using **Argon2id** ($m=64\text{MB}$, $t=3$, $p=1$) via `@noble/hashes` to eliminate GPU/ASIC brute-forcing.
-* **AES-256-GCM Authenticated Encryption**: Plaintext seed phrases are encrypted using AES-256-GCM with a 12-byte random IV (`entropy.ts`) and a 16-byte Galois Field (`authTag`) tamper-proof security seal.
-* **RAM Memory Zeroization**: Active byte buffers in RAM are actively zeroized (`buffer.fill(0)` in `memory.ts`) immediately after encryption/decryption and on 10-minute idle auto-lock timeout.
-* **IndexedDB Persistence**: Binary vault payloads (`salt`, `iv`, `authTag`, `ciphertext`) are stored locally in IndexedDB (`safex_db`) without blocking main thread UI.
+---
+
+## ⚡ Core Engineering & Cryptographic Concepts
+
+### 1. Zero-Trust Cryptographic Vault & Key Derivation
+* **Argon2id Memory-Hard KDF**: Replaces legacy PBKDF2/SHA-256 password hashing with **Argon2id** ($m=65,536\text{ KB}$, $t=3$, $p=1$) using `@noble/hashes`. By demanding 64 MB of dedicated RAM per hash attempt, brute-forcing master passwords on GPUs or ASICs is computationally infeasible.
+* **Authenticated Symmetric Encryption (AES-256-GCM)**: Plaintext recovery phrases are encrypted with a 12-byte random CSPRNG initialization vector (`iv`) and sealed with a 16-byte Galois Field authentication tag (`authTag`). Any bit corruption or tampering immediately invalidates decryption.
+* **Ephemeral Session Persistence**: Uses an in-memory / `sessionStorage` hybrid cache. Survives page reloads (F5) in the active tab, but **automatically self-destructs the moment the browser tab is closed**.
+* **Active RAM Zeroization**: Decrypted private keys exist only in volatile JavaScript memory while unlocked. When locked or after a 10-minute inactivity timeout, buffers are actively scrubbed using `.fill(0)`.
+
+### 2. Multi-Chain Address Derivation (EVM + Bitcoin)
+* **BIP-39 Mnemonic Standards**: Cryptographically secure entropy collection supporting 128-bit (12 words) and 256-bit (24 words) recovery phrases with SHA-256 checksum bits.
+* **BIP-32 / BIP-44 Hierarchical Deterministic (HD) Paths**:
+  * **Ethereum / EVM**: Path `m/44'/60'/0'/0/0` $\rightarrow$ Uncompressed public key $\rightarrow$ `Keccak-256` hashing of $(X, Y)$ coordinates $\rightarrow$ Drop first 12 bytes $\rightarrow$ EIP-55 mixed-case checksum.
+  * **Bitcoin Native SegWit (BIP-84)**: Path `m/84'/0'/0'/0/0` $\rightarrow$ Compressed public key (33 bytes) $\rightarrow$ `HASH160` (SHA-256 + RIPEMD-160) $\rightarrow$ Witness program version 0 with 5-bit Bech32 encoding (`bc1q...`).
+
+### 3. EIP-1559 Modern Transaction Architecture
+* **Type-2 Envelope Serialization**: Constructs and encodes native EIP-1559 transactions:
+  $$\text{Payload} = \text{0x02} \mathbin{\Vert} \text{RLP}\left([ \text{chainId}, \text{nonce}, \text{maxPriorityFeePerGas}, \text{maxFeePerGas}, \text{gasLimit}, \text{to}, \text{value}, \text{data}, \text{accessList} ]\right)$$
+* **Base Fee Burn & Priority Tip**:
+  $$\text{Total Fee} = \text{Gas Units} \times (\text{Base Fee} + \text{Priority Fee})$$
+* **Client-Side ECDSA Offline Signing**: Uses curve `secp256k1` to compute the signature tuple $(r, s, v)$ completely in the browser before broadcasting the signed hex bytecode to the blockchain mempool.
+* **Sender Address Extraction**: Demonstrates mathematically how EVM miners recover the originating `from` address from $(r, s, v)$ without transmitting the sender's public key across the wire.
+
+### 4. Smart Contracts & ERC-20 Token Integration
+* **EVM Calldata Construction**: Manual calculation of 4-byte function selectors (`0xa9059cbb` for `transfer(address,uint256)`) and 32-byte left-padded hex encoding.
+* **Fixed-Point Arithmetic (BigInt)**: Eliminates JavaScript IEEE-754 floating-point inaccuracies when handling token transfers with different decimal precisions (e.g. 6 decimals for USDC/USDT vs. 18 decimals for ETH/DAI).
+* **Multi-Chain Verified Registry**: Seamlessly handles testnet assets (Sepolia USDC, LINK, WETH) and Ethereum Mainnet assets (native ETH, USDC, USDT, WBTC, DAI).
+* **Custom Token Dynamic Import**: Paste any verified ERC-20 contract address to query `name()`, `symbol()`, `decimals()`, and `balanceOf(address)` directly from the blockchain state.
+
+### 5. Resilient Multi-Provider RPC Failover Tier
+* **Zero-Downtime Fallback Transports**: Configures multi-node resilient fallback pools:
+  * **Sepolia Testnet**: PublicNode, dRPC, and Ethereum Foundation (`rpc.sepolia.org`).
+  * **Ethereum Mainnet**: LlamaRPC, Ankr, Cloudflare, with plug-and-play support for dedicated Alchemy or Infura nodes.
+* **Automatic Node Failover**: Network rate limits (HTTP 429) or node timeouts trigger instantaneous switching to healthy secondary RPC endpoints.
 
 ---
 
-## 🌐 Multi-Chain Address Derivation
-
-SafeX supports multi-chain HD address derivation from a single 12/24-word BIP39 seed phrase:
-
-| Chain / Network | Path Standard | Derivation Path | Address Format | Hash & Encoding |
-| :--- | :--- | :--- | :--- | :--- |
-| **Ethereum & EVM** | BIP-44 | `m/44'/60'/0'/0/0` | `0x...` (40 hex chars) | `Keccak256` + EIP-55 |
-| **Bitcoin (SegWit)** | BIP-84 | `m/84'/0'/0'/0/0` | `bc1q...` (42 chars) | `HASH160` (SHA-256 + RIPEMD-160) + Bech32 |
-
-* **EVM Compatibility**: Works seamlessly across Ethereum, Polygon, Arbitrum, Base, Optimism, and BNB Smart Chain.
-* **Bitcoin Native SegWit**: Produces lowest-fee BIP-84 `bc1q...` Bech32 addresses using `@scure/bip32` and `@scure/base`.
-
----
-
-## 📐 Monorepo Architecture
-
-SafeX is structured as an `npm` workspace monorepo divided into applications and shared packages:
+## 💻 Tech Stack & Codebase Structure
 
 ```text
 SafeX---Crypto-Wallet/
 ├── apps/
-│   ├── web/            # Next.js 14 Frontend Application & Vault Core (Port 3000)
-│   └── server/         # Express + Node.js API Server with Orchid ORM (Port 4000)
-├── packages/
-│   └── api/            # Shared oRPC API procedure contracts & schemas
-├── Plan/               # Architectural specifications & technical roadmaps
-└── docker-compose.yml  # Local infrastructure services (PostgreSQL 16)
+│   ├── web/                        # Next.js 14 Client-Side Wallet Application
+│   │   ├── app/                    # App Router (Dashboard, Send, Receive, History, Status)
+│   │   ├── components/             # Reusable UI (TokenAssetsList, ChainSelector, VaultGate, QR)
+│   │   └── lib/
+│   │       ├── crypto/             # Pure client cryptography (BIP-39, HD Keys, Vault, EIP-1559)
+│   │       └── services/           # History, token registry, price service
+│   └── server/                     # Lightweight Blockchain Helper & Broadcast Node
+│       └── src/
+│           └── core/blockchain/    # RPC clients, gas estimation, read/write procedures
+├── notes/                          # Deep Technical Handbooks (Phases 1–5), Math Proofs, Infographics
+└── Plan/                           # Project Roadmap & Implementation Tracker
 ```
 
-### Application Packages
-
-* **`@safex/web`** (`apps/web`): Next.js App Router UI featuring Tailwind CSS, Lucide icons, Zustand RAM store, IndexedDB vault storage, and real-time state synchronization via `oRPC` client.
-* **`@safex/server`** (`apps/server`): Express backend powered by `Orchid ORM` & PostgreSQL, running type-safe RPC procedures and database migrations.
-* **`@safex/api`** (`packages/api`): Shared contract package exposing procedure definitions to ensure end-to-end type safety.
-
----
-
-## ⚡ Technology Stack
-
-| Layer | Technology | Key Responsibilities |
+| Component | Technology | Role in Architecture |
 | :--- | :--- | :--- |
-| **Frontend Framework** | `Next.js 14` + `React 18` | App router layout, server & client components |
-| **Styling & UI** | `Tailwind CSS` + `Lucide React` | Responsive dark-mode trading & vault interface |
-| **API Transport** | `oRPC` (Client & Server) | End-to-end type-safe RPC communication |
-| **Backend Runtime** | `Node.js` + `Express` + `TypeScript` | Business logic, session cookies, auth router |
-| **Database & ORM** | `PostgreSQL 16` + `Orchid ORM` | ACID transaction storage, user wallet records |
-| **Crypto & Blockchain** | `@noble/hashes` + `@scure/bip32` + `@scure/base` + `viem` | Argon2id KDF, AES-256-GCM, BIP-39, BIP-84, multi-provider JSON-RPC failover |
-| **Infrastructure** | `Docker Compose` | Local PostgreSQL service management |
+| **Frontend UI** | `Next.js 14` + `React 18` + `Tailwind CSS` | Client application, responsive dark-mode dashboard |
+| **RAM State** | `Zustand` + `sessionStorage` | Ephemeral in-memory vault state, 10-minute auto-lock |
+| **Local Vault Storage** | `IndexedDB` (`safex_db`) | Encrypted ciphertext storage (`salt`, `iv`, `authTag`, `ciphertext`) |
+| **Blockchain Engine** | `Viem 2.x` + `@scure/bip32` + `@scure/base` | RLP encoding, multi-provider JSON-RPC, Bech32 & EIP-55 formatting |
+| **Cryptography** | `@noble/hashes` (Argon2id, Keccak-256, SHA-256) | Zero-trust client-side key derivation and authenticated encryption |
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Getting Started Locally
 
 ### Prerequisites
-
-Make sure you have the following installed on your machine:
 * [Node.js](https://nodejs.org/) `>= 20.0.0`
 * [npm](https://www.npmjs.com/) `>= 10.0.0`
-* [Docker Desktop](https://www.docker.com/products/docker-desktop/) (for local database)
 
 ---
 
-### Environment Setup
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/Sandipxg/SafeX---Crypto-Wallet.git
-   cd SafeX---Crypto-Wallet
-   ```
-
-2. **Install workspace dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Configure Environment Variables:**
-
-   * **Backend Server (`apps/server/.env`)**:
-     ```bash
-     cp apps/server/.env.example apps/server/.env
-     ```
-     Default server configuration:
-     ```env
-     PORT=4000
-     NODE_ENV=development
-     DATABASE_URL=postgresql://safex:safexpassword@localhost:5435/safex_db
-     CORS_ORIGIN=http://localhost:3000
-
-     # Blockchain JSON-RPC Providers (Sepolia Testnet & Ethereum Mainnet)
-     SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
-     MAINNET_RPC_URL=https://eth.llamarpc.com
-     ```
-
-   * **Frontend Web (`apps/web/.env.local`)**:
-     ```bash
-     cp apps/web/.env.example apps/web/.env.local
-     ```
-     Default frontend configuration:
-     ```env
-     NEXT_PUBLIC_API_URL=http://localhost:4000
-     NEXT_PUBLIC_SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
-     NEXT_PUBLIC_MAINNET_RPC_URL=https://eth.llamarpc.com
-     ```
-
-4. **Blockchain RPC Node Providers (Alchemy / Infura / QuickNode):**
-   * By default, SafeX uses resilient **public fallback pools**:
-     * **Sepolia**: [PublicNode](https://publicnode.com/), [dRPC](https://drpc.org/), and Ethereum Foundation public node (`rpc.sepolia.org`).
-     * **Mainnet**: [LlamaRPC](https://llamarpc.com/), [Ankr](https://www.ankr.com/), and [Cloudflare](https://cloudflare-eth.com/).
-   * To use dedicated private node infrastructure (e.g. **Alchemy** or **Infura**), update `SEPOLIA_RPC_URL` and `MAINNET_RPC_URL` in your `.env` and `.env.local` files:
-     ```env
-     SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY
-     MAINNET_RPC_URL=https://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY
-     ```
-
----
-
-### Running Database Infrastructure
-
-Start the PostgreSQL database container in background mode:
+### Step 1: Clone & Install Dependencies
 
 ```bash
-npm run db:up
-```
-
-* **Host**: `localhost`
-* **Port**: `5435`
-* **User**: `safex`
-* **Password**: `safexpassword`
-* **Database**: `safex_db`
-
-To stop the database container:
-```bash
-npm run db:down
+git clone https://github.com/Sandipxg/SafeX---Crypto-Wallet.git
+cd SafeX---Crypto-Wallet
+npm install
 ```
 
 ---
 
-### Running Development Servers
+### Step 2: Configure Environment Variables
 
-Start all applications (`@safex/web` and `@safex/server`) concurrently in development mode:
+1. **Frontend Web (`apps/web/.env.local`)**:
+   ```bash
+   cp apps/web/.env.example apps/web/.env.local
+   ```
+   *Pre-configured defaults:*
+   ```env
+   NEXT_PUBLIC_API_URL=http://localhost:4000
+   NEXT_PUBLIC_SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
+   NEXT_PUBLIC_MAINNET_RPC_URL=https://eth.llamarpc.com
+   ```
 
+2. **Backend Server (`apps/server/.env`)**:
+   ```bash
+   cp apps/server/.env.example apps/server/.env
+   ```
+
+---
+
+### Step 3: Run Development Server
+
+Launch the web wallet application:
 ```bash
 npm run dev
 ```
 
-Once running:
-* 🌐 **Frontend UI & Vault**: [http://localhost:3000](http://localhost:3000)
-* ⚙️ **API Server**: [http://localhost:4000](http://localhost:4000)
-* 🩺 **Health Check**: [http://localhost:4000/health](http://localhost:4000/health)
+Open your browser to:
+* 🌐 **SafeX Web Application**: [http://localhost:3000](http://localhost:3000)
+* 🩺 **System Status & RPC Health**: [http://localhost:3000/status](http://localhost:3000/status)
 
 ---
 
-## 🧪 Available Scripts & Testing
+## 🧪 Testing & Verification
 
-Run these scripts from the workspace root:
+Run the client-side cryptographic test suite:
 
-| Command | Description |
-| :--- | :--- |
-| `npm run dev` | Runs all apps (`apps/*`) in development mode with live reloading |
-| `npm run build` | Compiles TypeScript across all workspace packages and apps |
-| `npm run test` | Executes test suites across all packages (using `Vitest`) |
-| `npm run test --workspace=@safex/web` | Runs client cryptographic test suite (`bip39`, `vault`, `btc` BIP-84) |
-| `npm run db:up` | Starts the PostgreSQL Docker container (`safex-postgres`) |
-| `npm run db:down` | Stops and removes the PostgreSQL Docker container |
+```bash
+# Execute unit tests for BIP-39, HD derivation, and AES-GCM vault security
+npm run test --workspace=@safex/web
+```
 
 ---
 
-## 🔒 Engineering Principles & Safety Rules
+## 🔮 Phase 6+ Roadmap: Centralized Exchange (CEX) Infrastructure
 
-1. **Zero-Trust Client Boundary**:
-   * Seed phrases, private keys, and Argon2id keys remain strictly on the user's client device. Only public wallet addresses are registered with the backend server.
+*Note: SafeX is a progressive learning platform. While Phases 1–5 implement a pure zero-trust self-custodial wallet, upcoming phases demonstrate centralized exchange mechanics:*
 
-2. **RAM Zeroization Protocol**:
-   * All active byte arrays in memory are actively zeroized (`buffer.fill(0)`) upon completion of cryptographic operations or on vault lock/timeout.
-
-3. **Numeric Precision Rule**:
-   * Cryptocurrency balances and amounts are stored using PostgreSQL `NUMERIC` / `DECIMAL` types. Floating-point math is strictly banned for currency calculations.
-
-4. **End-to-End Type Safety**:
-   * API procedures are defined once in `packages/api` using `oRPC` schemas and consumed directly by the web frontend and server implementation.
+* **Phase 6: Exchange Custody & Deposit Sweeper**: Hot/cold wallet segregation, auto-forwarding user deposits.
+* **Phase 7: Double-Entry Ledger (PostgreSQL)**: Immutable debits/credits accounting ledger preventing balance drift.
+* **Phase 8: High-Throughput Matching Engine**: In-memory limit order book (LOB) matching FIFO bids/asks.
+* **Phase 9: Proof of Reserves (PoR)**: Cryptographic Merkle tree reserve audits allowing users to verify solvency.
 
 ---
 
 ## 📄 License
 
-Distributed under the MIT License. See `LICENSE` for more information.
-
+Distributed under the MIT License. See [`LICENSE`](./LICENSE) for full details.
