@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { VaultState, unlockVault, hasVault as checkHasVault, destroyVault, loadVaultRecord } from '../crypto'
+import { VaultState, unlockVault, destroyVault, loadVaultRecord } from '../crypto'
 
 interface VaultStoreState {
   vaultState: VaultState
@@ -24,7 +24,69 @@ interface VaultStoreState {
 /**
  * Auto-Lock Duration: 10 minutes (600,000 milliseconds)
  */
-const AUTO_LOCK_MS = 10 * 60 * 1000 // 10 minutes
+const AUTO_LOCK_MS = 10 * 60 * 1000
+const SESSION_STORAGE_KEY = 'safex_ephemeral_vault_session'
+
+interface EphemeralSessionPayload {
+  mnemonic: string
+  address: `0x${string}`
+  btcAddress: string
+  publicKey: `0x${string}`
+  expiresAt: number
+}
+
+const saveSessionToStorage = (payload: Omit<EphemeralSessionPayload, 'expiresAt'>, ttlMs = AUTO_LOCK_MS): void => {
+  if (typeof window === 'undefined') return
+  try {
+    const sessionData: EphemeralSessionPayload = {
+      ...payload,
+      expiresAt: Date.now() + ttlMs,
+    }
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionData))
+  } catch {
+    // sessionStorage restriction fallback
+  }
+}
+
+const getSessionFromStorage = (): EphemeralSessionPayload | null => {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = sessionStorage.getItem(SESSION_STORAGE_KEY)
+    if (!raw) return null
+    const parsed: EphemeralSessionPayload = JSON.parse(raw)
+    if (!parsed || !parsed.expiresAt || Date.now() >= parsed.expiresAt) {
+      sessionStorage.removeItem(SESSION_STORAGE_KEY)
+      return null
+    }
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+const touchSessionInStorage = (ttlMs = AUTO_LOCK_MS): void => {
+  if (typeof window === 'undefined') return
+  try {
+    const raw = sessionStorage.getItem(SESSION_STORAGE_KEY)
+    if (!raw) return
+    const parsed: EphemeralSessionPayload = JSON.parse(raw)
+    if (parsed && parsed.expiresAt && Date.now() < parsed.expiresAt) {
+      parsed.expiresAt = Date.now() + ttlMs
+      sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(parsed))
+    }
+  } catch {
+    // fallback
+  }
+}
+
+const clearSessionFromStorage = (): void => {
+  if (typeof window === 'undefined') return
+  try {
+    sessionStorage.removeItem(SESSION_STORAGE_KEY)
+  } catch {
+    // fallback
+  }
+}
 
 /**
  * ============================================================================
@@ -32,22 +94,7 @@ const AUTO_LOCK_MS = 10 * 60 * 1000 // 10 minutes
  * ============================================================================
  * @description In-RAM state store for managing client wallet lock status,
  *              active EVM & Bitcoin wallet addresses, decrypted seed phrase string,
- *              and the 10-minute auto-lock security timer.
- *
- * @state_fields:
- * - vaultState         : 'LOCKED' | 'UNLOCKED'
- * - hasVaultInStorage  : boolean (whether encrypted record exists in IndexedDB)
- * - decryptedMnemonic  : string | null (held in RAM ONLY while UNLOCKED)
- * - activeAddress      : '0x...' public EVM address
- * - activeBtcAddress   : 'bc1q...' public Bitcoin Native SegWit address
- * - autoLockTimeoutId  : active timer handle for 10-minute auto-lock
- *
- * @actions:
- * - checkVaultExists   : Queries IndexedDB to see if wallet exists on device.
- * - unlock(password)   : Decrypts vault, stores mnemonic in RAM, starts 10m timer.
- * - resetAutoLockTimer : Resets 10m countdown on user activity.
- * - lock()             : Cancels timer, sets vaultState to LOCKED, wipes mnemonic to null.
- * - wipeVault()        : Locks state and permanently destroys IndexedDB record.
+ *              and the 10-minute auto-lock security timer with tab session survival.
  */
 export const useVaultStore = create<VaultStoreState>((set, get) => ({
   vaultState: 'LOCKED',
@@ -59,14 +106,39 @@ export const useVaultStore = create<VaultStoreState>((set, get) => ({
   activeChainId: 11155111,
   autoLockTimeoutId: null,
 
-  setActiveChainId: (chainId: 1 | 11155111) => {
+  setActiveChainId: (chainId: 1 | 11155111): void => {
     set({ activeChainId: chainId })
   },
 
-  checkVaultExists: async () => {
+  checkVaultExists: async (): Promise<boolean> => {
     const record = await loadVaultRecord()
     const exists = !!record
+
     if (record) {
+      // Check if we have an active tab session in sessionStorage
+      const session = getSessionFromStorage()
+      if (session && record.address && session.address.toLowerCase() === record.address.toLowerCase()) {
+        const remainingTime = Math.max(1000, session.expiresAt - Date.now())
+
+        const currentTimer = get().autoLockTimeoutId
+        if (currentTimer) clearTimeout(currentTimer)
+
+        const timer = setTimeout(() => {
+          get().lock()
+        }, remainingTime)
+
+        set({
+          hasVaultInStorage: true,
+          vaultState: 'UNLOCKED',
+          decryptedMnemonic: session.mnemonic,
+          activeAddress: session.address,
+          activeBtcAddress: session.btcAddress,
+          activePublicKey: session.publicKey,
+          autoLockTimeoutId: timer,
+        })
+        return true
+      }
+
       const isUnlocked = get().vaultState === 'UNLOCKED'
       set({
         hasVaultInStorage: true,
@@ -75,6 +147,7 @@ export const useVaultStore = create<VaultStoreState>((set, get) => ({
         activePublicKey: isUnlocked ? (record.publicKey || get().activePublicKey) : null,
       })
     } else {
+      clearSessionFromStorage()
       set({
         hasVaultInStorage: false,
         activeAddress: null,
@@ -85,14 +158,15 @@ export const useVaultStore = create<VaultStoreState>((set, get) => ({
     return exists
   },
 
-  unlock: async (password: string) => {
+  unlock: async (password: string): Promise<void> => {
     const { mnemonic, address, btcAddress, publicKey } = await unlockVault(password)
-    
-    // Clear existing timer if any
+
     const currentTimer = get().autoLockTimeoutId
     if (currentTimer) clearTimeout(currentTimer)
 
-    // Set 10-minute auto-lock timer
+    // Save session to tab storage
+    saveSessionToStorage({ mnemonic, address, btcAddress, publicKey })
+
     const timer = setTimeout(() => {
       get().lock()
     }, AUTO_LOCK_MS)
@@ -108,9 +182,20 @@ export const useVaultStore = create<VaultStoreState>((set, get) => ({
     })
   },
 
-  setSessionCredentials: (address: `0x${string}`, btcAddress: string, publicKey: `0x${string}`, mnemonic?: string) => {
+  setSessionCredentials: (
+    address: `0x${string}`,
+    btcAddress: string,
+    publicKey: `0x${string}`,
+    mnemonic?: string
+  ): void => {
     const currentTimer = get().autoLockTimeoutId
     if (currentTimer) clearTimeout(currentTimer)
+
+    if (mnemonic) {
+      saveSessionToStorage({ mnemonic, address, btcAddress, publicKey })
+    } else {
+      clearSessionFromStorage()
+    }
 
     const timer = setTimeout(() => {
       get().lock()
@@ -127,11 +212,13 @@ export const useVaultStore = create<VaultStoreState>((set, get) => ({
     })
   },
 
-  resetAutoLockTimer: () => {
+  resetAutoLockTimer: (): void => {
     const { vaultState, autoLockTimeoutId } = get()
     if (vaultState !== 'UNLOCKED') return
 
     if (autoLockTimeoutId) clearTimeout(autoLockTimeoutId)
+
+    touchSessionInStorage(AUTO_LOCK_MS)
 
     const newTimer = setTimeout(() => {
       get().lock()
@@ -140,9 +227,11 @@ export const useVaultStore = create<VaultStoreState>((set, get) => ({
     set({ autoLockTimeoutId: newTimer })
   },
 
-  lock: () => {
+  lock: (): void => {
     const currentTimer = get().autoLockTimeoutId
     if (currentTimer) clearTimeout(currentTimer)
+
+    clearSessionFromStorage()
 
     set({
       vaultState: 'LOCKED',
@@ -154,8 +243,9 @@ export const useVaultStore = create<VaultStoreState>((set, get) => ({
     })
   },
 
-  wipeVault: async () => {
+  wipeVault: async (): Promise<void> => {
     get().lock()
+    clearSessionFromStorage()
     await destroyVault()
     set({
       hasVaultInStorage: false,

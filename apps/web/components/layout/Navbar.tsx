@@ -17,7 +17,7 @@ export function Navbar() {
 
         <nav className="flex items-center gap-6">
           <Link
-            href="/"
+            href="/dashboard"
             className="flex items-center gap-1.5 text-sm font-medium text-slate-300 hover:text-white transition"
           >
             <Wallet className="w-4 h-4" />
