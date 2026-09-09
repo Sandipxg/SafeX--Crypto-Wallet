@@ -169,37 +169,76 @@ Same test as Phase 3, but on Bitcoin testnet, using the same Send/Receive UI wit
 
 ---
 
-# 🪙 Phase 4: Token Assets (ERC20)
+# 🪙 Phase 4: Token Assets (ERC-20)
 
 ## Learn
 
-- [ ] Solidity syntax, ABI encoding/decoding basics (reading, not yet writing contracts)
-- [ ] Token Standards (ERC20, Permit/EIP-2612)
+- [x] Native Coins vs. Smart Contract Tokens & Wrapped ETH (WETH)
+- [x] EVM Calldata, 4-byte function selectors (`0xa9059cbb`) & ABI encoding
+- [x] ERC-20 state architecture (`mapping(address => uint256)`, `balanceOf`, `transfer`)
+- [x] The Allowance pattern (`approve` + `transferFrom`), Infinite Approvals & EIP-2612 Permit
+- [x] Fixed-point arithmetic & variable decimals (18 vs 6 vs 8, no floating-point in EVM)
+- [x] Event logs, topics & token discovery (`event Transfer`)
+- [x] Real-world token quirks (USDT missing-bool, `SafeERC20`, fee-on-transfer, blacklists)
 
 ## Build — Backend
 
-- [ ] ERC20 interaction module (balanceOf, transfer, approve, permit)
-- [ ] Contract ABI event log decoder (for incoming Transfer events)
-- [ ] `getTokenBalances` endpoint (known token list + custom token address lookup)
+- [ ] ERC-20 read/write module (`balanceOf`, `decimals`, `symbol`, `name`, `allowance`)
+- [ ] EVM calldata builder & ABI encoder for `transfer` and `approve`
+- [ ] Batch token balance scanner (`getTokenBalances` via Multicall3/parallel RPC)
+- [ ] Token event log decoder (parse raw logs for incoming/outgoing transfers)
 
 ## Build — Frontend
 
-- [ ] **Assets tab** — list of ERC20 token balances alongside native balance
-- [ ] "Add custom token" by contract address
-- [ ] Send screen extended to support token selection, not just native currency
+- [ ] **Assets tab on Dashboard** — token list showing Native ETH + tracked ERC-20 balances with live USD rates
+- [ ] **"Import Token" modal** — paste contract address, auto-fetch symbol/decimals, save to IndexedDB
+- [ ] **Multi-asset Send screen** — token selector dropdown, balance checks, automatic calldata generation, dynamic gas limit (~65,000)
+- [ ] **Transaction history extension** — decode and display ERC-20 transfers alongside ETH
 
 ## ✅ Definition of Done
 
-Send a testnet ERC20 token (e.g. testnet USDC) to your wallet, see it appear automatically in the Assets tab, and send it back out through the same Send screen used for ETH.
+Import a testnet ERC-20 token (e.g. Sepolia USDC) into your wallet, see its balance and metadata appear in the Assets tab, and send a portion out through the Send screen with verified on-chain confirmation.
 
+---
+
+# 🔄 Phase 5: On-Chain Swapping (DEX / AMM Architecture & Execution)
+
+## Learn
+
+- [ ] AMM Constant Product Model ($x \cdot y = k$) & 0.30% LP fee retention in reserves
+- [ ] Multi-contract architecture: Router (orchestrator) vs. Factory (registry) vs. Liquidity Pools (reserves)
+- [ ] Multi-hop swap routing (`path = [USDC, WETH, WBTC]`) & token decimal scaling (6 vs. 18 vs. 8)
+- [ ] Calldata encoding for `swapExactTokensForTokens` (`amountIn`, `amountOutMin`, `path`, `recipient`, `deadline`)
+- [ ] The two-step lifecycle: ERC-20 `allowance` verification → `approve()` → Router `transferFrom()`
+- [ ] Atomic execution, gas metering (~150,000 units across 4 contracts), and slippage/sandwich defense
+- [ ] Receipt event log decoding: parsing multi-contract `Transfer` and `Swap` event topics
+
+## Build — Backend
+
+- [ ] Factory pair resolver & pool reserve reader (`getPair`, `getReserves`)
+- [ ] Swap quote & slippage calculator (`getAmountOut`, `amountOutMin` with configurable slippage)
+- [ ] Swap calldata builder (`swapExactTokensForTokens`, `swapExactETHForTokens`, `swapExactTokensForETH`)
+- [ ] Multi-event receipt parser (extracting intermediate `Swap` and final `Transfer` logs)
+
+## Build — Frontend
+
+- [ ] **Swap screen (`/swap`)** — From/To token selectors, live output quotation, exchange rate & price impact
+- [ ] **One-click Allowance approval gate** — detect if `allowance < amountIn`, prompt `approve()`, track authorization
+- [ ] **Slippage & transaction settings modal** — 0.1%, 0.5%, 1.0%, custom slippage tolerance + deadline timer
+- [ ] **Offline signing & execution pipeline** — construct EIP-1559 payload, sign in RAM via client vault, broadcast
+- [ ] **Swap receipt & history card** — visual route trace (`USDC → WETH → WBTC`), gas paid, confirmed output amount
+
+## ✅ Definition of Done
+
+Perform an end-to-end multi-hop swap on Sepolia (e.g. Sepolia USDC → WETH → test token), verifying the one-transaction atomic execution, receipt event log decoding, and accurate balance updates in the Assets tab.
 
 
 ---
 
-# 🧪 Phase 5: Smart Contract Security Lab (internal — no UI)
+# 🧪 Phase 6: Smart Contract Security Lab (internal — no UI)
 
 _This phase is dev-tooling for your own understanding, not a user-facing feature. It's here so the vulnerability
-concepts are fresh before Phase 6's custodial infrastructure, which is where a security mistake would matter most._
+concepts are fresh before Phase 7's custodial infrastructure, which is where a security mistake would matter most._
 
 ## Learn
 
@@ -218,9 +257,9 @@ Your own written test exploits a real vulnerability in a local contract, then fa
 
 ---
 
-# 🚜 Phase 6: Custodial Deposits & Exchange Balance
+# 🚜 Phase 7: Custodial Deposits & Exchange Balance
 
-_This is where the app splits into two coexisting halves: the self-custody **Wallet** (Phases 1–4, user controls
+_This is where the app splits into two coexisting halves: the self-custody **Wallet** (Phases 1–5, user controls
 keys) and the custodial **Exchange** (this phase onward, SafeX holds funds and tracks balances internally). Both
 live in the same app under different nav sections._
 
@@ -257,7 +296,7 @@ Send testnet funds to the Exchange deposit address (not the personal wallet addr
 
 ---
 
-# ⚖️ Phase 7: Double-Entry Ledger & Balance Locking
+# ⚖️ Phase 8: Double-Entry Ledger & Balance Locking
 
 ## Learn
 
@@ -287,7 +326,7 @@ Send an internal transfer to a second test account entirely off-chain, see both 
 
 ---
 
-# ⚡ Phase 8: Trading — Order Book & Matching Engine
+# ⚡ Phase 9: Trading — Order Book & Matching Engine
 
 ## Learn
 
@@ -306,7 +345,7 @@ Send an internal transfer to a second test account entirely off-chain, see both 
 - [ ] Order placement/cancellation endpoints
 - [ ] WebSocket server broadcasting order book depth & ticker
 - [ ] Kafka producer for matches + settlement consumer
-- [ ] Ledger settlement integration (atomic buyer/seller balance updates via Phase 7's ledger)
+- [ ] Ledger settlement integration (atomic buyer/seller balance updates via Phase 8's ledger)
 - [ ] Elasticsearch audit logger
 
 ## Build — Frontend
@@ -317,11 +356,11 @@ Send an internal transfer to a second test account entirely off-chain, see both 
 
 ## ✅ Definition of Done
 
-Two test accounts place opposing limit orders through the Trade screen; they match, the trade settles atomically, and both accounts' Balance pages (Phase 7) update live via WebSocket with no page refresh.
+Two test accounts place opposing limit orders through the Trade screen; they match, the trade settles atomically, and both accounts' Balance pages (Phase 8) update live via WebSocket with no page refresh.
 
 ---
 
-# 💸 Phase 9: Withdrawals, Reconciliation & Circuit Breakers
+# 💸 Phase 10: Withdrawals, Reconciliation & Circuit Breakers
 
 ## Learn
 
@@ -332,7 +371,7 @@ Two test accounts place opposing limit orders through the Trade screen; they mat
 
 ## Build — Backend
 
-- [ ] Withdrawal request → approval → on-chain payout pipeline (reuses Phase 6 hot wallet + Phase 3/3.5 tx builders)
+- [ ] Withdrawal request → approval → on-chain payout pipeline (reuses Phase 7 hot wallet + Phase 3/3.5 tx builders)
 - [ ] Daily reconciliation worker (DB balances vs live vault balances)
 - [ ] Emergency circuit breaker (auto-halt withdrawals on drift)
 - [ ] Merkle-tree Proof of Reserves generator
@@ -349,7 +388,7 @@ Withdraw testnet funds from Exchange balance to an external address and see it l
 
 ---
 
-# 🛡️ Phase 10: Enterprise Key Custody & Infra Hardening
+# 🛡️ Phase 11: Enterprise Key Custody & Infra Hardening
 
 ## Learn
 
@@ -383,7 +422,7 @@ A push to `main` runs CI, builds a container, deploys to a local/staging cluster
 
 ---
 
-# 📈 Phase 11: Compliance — KYC & AML
+# 📈 Phase 12: Compliance — KYC & AML
 
 ## Learn
 
@@ -408,7 +447,7 @@ A new account is withdrawal-limited until KYC is submitted and approved through 
 
 ---
 
-# 📊 Phase 12: Trading+ — Charts, Margin & Liquidations (stretch)
+# 📊 Phase 13: Trading+ — Charts, Margin & Liquidations (stretch)
 
 ## Learn
 
@@ -432,7 +471,7 @@ A simulated leveraged position breaches its maintenance margin and the liquidati
 
 ---
 
-# 🔀 Phase 13: Multi-Chain Expansion — Solana & Tron (Optional Stretch Goal)
+# 🔀 Phase 14: Multi-Chain Expansion — Solana & Tron (Optional Stretch Goal)
 
 _Deferred until the primary EVM+Bitcoin wallet and exchange features (Phases 1–12) are fully working end-to-end._
 
