@@ -4,6 +4,9 @@ export interface ClientTxRecord {
   from: `0x${string}`
   to: `0x${string}`
   valueEth: string
+  tokenSymbol?: string
+  tokenAmount?: string
+  tokenAddress?: `0x${string}`
   nonce: number
   chainId: number
   status: 'created' | 'broadcasted' | 'pending' | 'confirmed' | 'failed' | 'dropped'

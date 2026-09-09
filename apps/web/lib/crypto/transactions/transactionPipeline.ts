@@ -11,6 +11,9 @@ export interface ExecuteTransactionParams {
   from: `0x${string}`
   to: `0x${string}`
   valueEth: string
+  tokenSymbol?: string
+  tokenAmount?: string
+  tokenAddress?: `0x${string}`
 }
 
 export interface ExecuteTransactionResult {
@@ -34,7 +37,7 @@ export interface ExecuteTransactionResult {
 export async function executeTransactionPipeline(
   params: ExecuteTransactionParams
 ): Promise<ExecuteTransactionResult> {
-  const { password, preparedTxRequest, from, to, valueEth } = params
+  const { password, preparedTxRequest, from, to, valueEth, tokenSymbol, tokenAmount, tokenAddress } = params
   const chainId = preparedTxRequest.chainId ?? 11155111
 
   // 1. Offline ECDSA Signing in RAM
@@ -64,6 +67,9 @@ export async function executeTransactionPipeline(
     from,
     to,
     valueEth,
+    tokenSymbol,
+    tokenAmount,
+    tokenAddress,
     nonce: preparedTxRequest.nonce,
     chainId,
     status: 'broadcasted',

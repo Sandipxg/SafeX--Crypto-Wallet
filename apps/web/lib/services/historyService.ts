@@ -1,5 +1,9 @@
-import { formatEther } from 'viem'
-import { ClientTxRecord, getClientTxHistory, saveClientTx } from '../crypto/transactions/transactionStorage'
+import { formatEther, formatUnits } from 'viem'
+import {
+  ClientTxRecord,
+  getClientTxHistory,
+  saveClientTx,
+} from '../crypto/transactions/transactionStorage'
 
 /**
  * ============================================================================
@@ -8,7 +12,7 @@ import { ClientTxRecord, getClientTxHistory, saveClientTx } from '../crypto/tran
  * @description Queries public block explorer indexer (MetaMask / Trust Wallet pattern):
  *              - Sepolia: https://eth-sepolia.blockscout.com/api
  *              - Mainnet: https://eth.blockscout.com/api
- *              Fetches all mined incoming (faucet/deposits) and outgoing transactions.
+ *              Fetches native ETH and ERC-20 token transfer events.
  */
 export async function fetchOnChainTransactions(
   address: string,
@@ -20,58 +24,103 @@ export async function fetchOnChainTransactions(
         ? 'https://eth.blockscout.com/api'
         : 'https://eth-sepolia.blockscout.com/api'
 
-    const url = `${baseUrl}?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=50&sort=desc`
-
-    const res = await fetch(url, { headers: { Accept: 'application/json' } })
-    if (!res.ok) {
-      throw new Error(`Explorer API HTTP ${res.status}`)
-    }
-
-    const data = await res.json()
-    if (data.status !== '1' || !Array.isArray(data.result)) {
-      return []
-    }
+    const [txRes, tokenRes] = await Promise.all([
+      fetch(
+        `${baseUrl}?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=50&sort=desc`,
+        { headers: { Accept: 'application/json' } }
+      ).catch(() => null),
+      fetch(
+        `${baseUrl}?module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&page=1&offset=50&sort=desc`,
+        { headers: { Accept: 'application/json' } }
+      ).catch(() => null),
+    ])
 
     const records: ClientTxRecord[] = []
 
-    for (const item of data.result) {
-      // Format value from wei to ether
-      let formattedValue = '0'
-      try {
-        if (item.value && item.value !== '0') {
-          formattedValue = formatEther(BigInt(item.value))
+    // 1. Parse standard ETH transactions
+    if (txRes && txRes.ok) {
+      const data = await txRes.json()
+      if (data.status === '1' && Array.isArray(data.result)) {
+        for (const item of data.result) {
+          let formattedValue = '0'
+          try {
+            if (item.value && item.value !== '0') {
+              formattedValue = formatEther(BigInt(item.value))
+            }
+          } catch {
+            formattedValue = '0'
+          }
+
+          const record: ClientTxRecord = {
+            id: item.hash,
+            hash: item.hash,
+            from: (item.from || '').toLowerCase() as `0x${string}`,
+            to: (item.to || '').toLowerCase() as `0x${string}`,
+            valueEth: formattedValue,
+            nonce: Number(item.nonce) || 0,
+            chainId,
+            status: item.isError === '0' ? 'confirmed' : 'failed',
+            blockNumber: Number(item.blockNumber) || undefined,
+            gasUsed: item.gasUsed,
+            effectiveGasPrice: item.gasPrice,
+            createdAt: item.timeStamp
+              ? new Date(Number(item.timeStamp) * 1000).toISOString()
+              : new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }
+
+          records.push(record)
+          saveClientTx(record).catch(() => {})
         }
-      } catch {
-        formattedValue = '0'
       }
+    }
 
-      const record: ClientTxRecord = {
-        id: item.hash,
-        hash: item.hash,
-        from: (item.from || '').toLowerCase() as `0x${string}`,
-        to: (item.to || '').toLowerCase() as `0x${string}`,
-        valueEth: formattedValue,
-        nonce: Number(item.nonce) || 0,
-        chainId,
-        status: item.isError === '0' ? 'confirmed' : 'failed',
-        blockNumber: Number(item.blockNumber) || undefined,
-        gasUsed: item.gasUsed,
-        effectiveGasPrice: item.gasPrice,
-        createdAt: item.timeStamp
-          ? new Date(Number(item.timeStamp) * 1000).toISOString()
-          : new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+    // 2. Parse ERC-20 token transfer events
+    if (tokenRes && tokenRes.ok) {
+      const data = await tokenRes.json()
+      if (data.status === '1' && Array.isArray(data.result)) {
+        for (const item of data.result) {
+          const decimals = Number(item.tokenDecimal) || 18
+          let formattedAmount = '0'
+          try {
+            formattedAmount = formatUnits(BigInt(item.value || '0'), decimals)
+          } catch {
+            formattedAmount = '0'
+          }
+
+          const record: ClientTxRecord = {
+            id: `${item.hash}-${item.contractAddress}`,
+            hash: item.hash,
+            from: (item.from || '').toLowerCase() as `0x${string}`,
+            to: (item.to || '').toLowerCase() as `0x${string}`,
+            valueEth: '0',
+            tokenSymbol: item.tokenSymbol || 'TOKEN',
+            tokenAmount: formattedAmount,
+            tokenAddress: (item.contractAddress || '').toLowerCase() as `0x${string}`,
+            nonce: Number(item.nonce) || 0,
+            chainId,
+            status: 'confirmed',
+            blockNumber: Number(item.blockNumber) || undefined,
+            gasUsed: item.gasUsed,
+            effectiveGasPrice: item.gasPrice,
+            createdAt: item.timeStamp
+              ? new Date(Number(item.timeStamp) * 1000).toISOString()
+              : new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }
+
+          records.push(record)
+          saveClientTx(record).catch(() => {})
+        }
       }
-
-      records.push(record)
-
-      // Cache into local IndexedDB in background for offline support
-      saveClientTx(record).catch(() => {})
     }
 
     return records
   } catch (err) {
-    console.warn('[SafeX HistoryService] Failed to fetch on-chain transactions, falling back to local cache:', err)
+    console.warn(
+      '[SafeX HistoryService] Failed to fetch on-chain transactions, falling back to local cache:',
+      err
+    )
     return []
   }
 }
@@ -83,7 +132,7 @@ export async function fetchOnChainTransactions(
  * @description Merges local optimistic transactions from IndexedDB with on-chain records:
  *              1. Reads local transactions (including pending sends).
  *              2. Pulls on-chain transactions (incoming deposits, faucets, mined sends).
- *              3. Deduplicates by hash and sorts by date descending.
+ *              3. Deduplicates by unique record ID and sorts by date descending.
  */
 export async function getUnifiedHistory(
   address: string,
@@ -94,17 +143,19 @@ export async function getUnifiedHistory(
     fetchOnChainTransactions(address, chainId),
   ])
 
-  // Map by hash to deduplicate (on-chain takes precedence for confirmed status)
+  // Map by id to deduplicate
   const map = new Map<string, ClientTxRecord>()
 
   // 1. Add local records first
   for (const tx of localTxs) {
-    map.set(tx.hash.toLowerCase(), tx)
+    const key = tx.tokenAddress ? `${tx.hash}-${tx.tokenAddress}` : tx.hash
+    map.set(key.toLowerCase(), tx)
   }
 
   // 2. Overwrite / insert with on-chain records
   for (const tx of onChainTxs) {
-    map.set(tx.hash.toLowerCase(), tx)
+    const key = tx.tokenAddress ? `${tx.hash}-${tx.tokenAddress}` : tx.hash
+    map.set(key.toLowerCase(), tx)
   }
 
   const unified = Array.from(map.values())

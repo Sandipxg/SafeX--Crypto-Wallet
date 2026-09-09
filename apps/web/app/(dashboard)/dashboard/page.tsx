@@ -22,6 +22,7 @@ import { ChainSelector } from '@/components/ChainSelector'
 import { VaultGate } from '@/components/VaultGate'
 import { fetchWalletBalance } from '@/lib/crypto'
 import { fetchMarketPrices, MarketPrices } from '@/lib/services/priceService'
+import { TokenAssetsList } from '@/components/TokenAssetsList'
 
 export default function DashboardPage() {
   const {
@@ -326,7 +327,7 @@ export default function DashboardPage() {
               }`}
             >
               {isBitcoin ? <ArrowDownLeft className="w-4 h-4" /> : <Send className="w-4 h-4" />}
-              <span>{isBitcoin ? 'Deposit BTC' : 'Send ETH'}</span>
+              <span>{isBitcoin ? 'Deposit BTC' : 'Send'}</span>
             </Link>
 
             <button
@@ -351,6 +352,16 @@ export default function DashboardPage() {
             </Link>
           </div>
         </div>
+
+        {/* Multi-Asset Token Balances List (EVM) */}
+        {!isBitcoin && activeAddress && (
+          <TokenAssetsList
+            walletAddress={activeAddress}
+            chainId={activeChainId}
+            nativeBalance={ethBalance !== null ? ethBalance : '0'}
+            nativeUsdValue={formattedUsdValue}
+          />
+        )}
 
         {/* Security Summary Footer */}
         <div className="p-4 rounded-2xl bg-dark-card/60 border border-dark-border flex flex-wrap items-center justify-between gap-4 text-xs text-slate-400">

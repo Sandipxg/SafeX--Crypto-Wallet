@@ -183,21 +183,21 @@ Same test as Phase 3, but on Bitcoin testnet, using the same Send/Receive UI wit
 
 ## Build — Backend
 
-- [ ] ERC-20 read/write module (`balanceOf`, `decimals`, `symbol`, `name`, `allowance`)
-- [ ] EVM calldata builder & ABI encoder for `transfer` and `approve`
-- [ ] Batch token balance scanner (`getTokenBalances` via Multicall3/parallel RPC)
-- [ ] Token event log decoder (parse raw logs for incoming/outgoing transfers)
+- [x] ERC-20 read/write module (`balanceOf`, `decimals`, `symbol`, `name`, `allowance`)
+- [x] EVM calldata builder & ABI encoder for `transfer` and `approve`
+- [x] Batch token balance scanner (`getTokenBalances` via Multicall3/parallel RPC)
+- [x] Token event log decoder (parse raw logs for incoming/outgoing transfers)
 
 ## Build — Frontend
 
-- [ ] **Assets tab on Dashboard** — token list showing Native ETH + tracked ERC-20 balances with live USD rates
-- [ ] **"Import Token" modal** — paste contract address, auto-fetch symbol/decimals, save to IndexedDB
-- [ ] **Multi-asset Send screen** — token selector dropdown, balance checks, automatic calldata generation, dynamic gas limit (~65,000)
-- [ ] **Transaction history extension** — decode and display ERC-20 transfers alongside ETH
+- [x] **Assets tab on Dashboard** — token list showing Native ETH + tracked ERC-20 balances with live USD rates
+- [x] **"Import Token" modal** — paste contract address, auto-fetch symbol/decimals, save to IndexedDB
+- [x] **Multi-asset Send screen** — token selector dropdown, balance checks, automatic calldata generation, dynamic gas limit (~65,000)
+- [x] **Transaction history extension** — decode and display ERC-20 transfers alongside ETH
 
 ## ✅ Definition of Done
 
-Import a testnet ERC-20 token (e.g. Sepolia USDC) into your wallet, see its balance and metadata appear in the Assets tab, and send a portion out through the Send screen with verified on-chain confirmation.
+- [x] Import a testnet ERC-20 token (e.g. Sepolia USDC) into your wallet, see its balance and metadata appear in the Assets tab, and send a portion out through the Send screen with verified on-chain confirmation.
 
 ---
 

@@ -143,8 +143,15 @@ export default function HistoryPage() {
                     })
                   : 'Recent'
 
+                const isToken = Boolean(tx.tokenSymbol)
+                const displaySymbol = tx.tokenSymbol || 'ETH'
+                const displayAmount = tx.tokenAmount || tx.valueEth
+                const actionLabel = isOutgoing
+                  ? `Sent ${displaySymbol}`
+                  : `Received ${displaySymbol}`
+
                 return (
-                  <div key={tx.hash} className="py-4 flex flex-wrap items-center justify-between gap-4">
+                  <div key={tx.id || tx.hash} className="py-4 flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                       <div
                         className={`p-2.5 rounded-xl border ${
@@ -159,8 +166,13 @@ export default function HistoryPage() {
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-bold text-white">
-                            {isOutgoing ? 'Sent ETH' : 'Received ETH'}
+                            {actionLabel}
                           </span>
+                          {isToken && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono font-semibold">
+                              ERC-20
+                            </span>
+                          )}
                           <span
                             className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
                               tx.status === 'confirmed'
@@ -196,7 +208,7 @@ export default function HistoryPage() {
                           isOutgoing ? 'text-slate-200' : 'text-emerald-400'
                         }`}
                       >
-                        {isOutgoing ? '-' : '+'}{tx.valueEth} ETH
+                        {isOutgoing ? '-' : '+'}{displayAmount} {displaySymbol}
                       </span>
                       <a
                         href={`${explorerBaseUrl}/tx/${tx.hash}`}
