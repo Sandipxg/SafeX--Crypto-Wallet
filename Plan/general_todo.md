@@ -205,32 +205,32 @@ Same test as Phase 3, but on Bitcoin testnet, using the same Send/Receive UI wit
 
 ## Learn
 
-- [ ] AMM Constant Product Model ($x \cdot y = k$) & 0.30% LP fee retention in reserves
-- [ ] Multi-contract architecture: Router (orchestrator) vs. Factory (registry) vs. Liquidity Pools (reserves)
-- [ ] Multi-hop swap routing (`path = [USDC, WETH, WBTC]`) & token decimal scaling (6 vs. 18 vs. 8)
-- [ ] Calldata encoding for `swapExactTokensForTokens` (`amountIn`, `amountOutMin`, `path`, `recipient`, `deadline`)
-- [ ] The two-step lifecycle: ERC-20 `allowance` verification → `approve()` → Router `transferFrom()`
-- [ ] Atomic execution, gas metering (~150,000 units across 4 contracts), and slippage/sandwich defense
-- [ ] Receipt event log decoding: parsing multi-contract `Transfer` and `Swap` event topics
+- [x] AMM Constant Product Model ($x \cdot y = k$) & 0.30% LP fee retention in reserves
+- [x] Multi-contract architecture: Router (orchestrator) vs. Factory (registry) vs. Liquidity Pools (reserves)
+- [x] Multi-hop swap routing (`path = [USDC, WETH, WBTC]`) & token decimal scaling (6 vs. 18 vs. 8)
+- [x] Calldata encoding for `swapExactTokensForTokens` (`amountIn`, `amountOutMin`, `path`, `recipient`, `deadline`)
+- [x] The two-step lifecycle: ERC-20 `allowance` verification → `approve()` → Router `transferFrom()`
+- [x] Atomic execution, gas metering (~150,000 units across 4 contracts), and slippage/sandwich defense
+- [x] Receipt event log decoding: parsing multi-contract `Transfer` and `Swap` event topics
 
 ## Build — Backend
 
-- [ ] Factory pair resolver & pool reserve reader (`getPair`, `getReserves`)
-- [ ] Swap quote & slippage calculator (`getAmountOut`, `amountOutMin` with configurable slippage)
-- [ ] Swap calldata builder (`swapExactTokensForTokens`, `swapExactETHForTokens`, `swapExactTokensForETH`)
-- [ ] Multi-event receipt parser (extracting intermediate `Swap` and final `Transfer` logs)
+- [x] Factory pair resolver & pool reserve reader (`getPair`, `getReserves`)
+- [x] Swap quote & slippage calculator (`getAmountOut`, `amountOutMin` with configurable slippage)
+- [x] Swap calldata builder (`swapExactTokensForTokens`, `swapExactETHForTokens`, `swapExactTokensForETH`)
+- [x] Multi-event receipt parser (extracting intermediate `Swap` and final `Transfer` logs)
 
 ## Build — Frontend
 
-- [ ] **Swap screen (`/swap`)** — From/To token selectors, live output quotation, exchange rate & price impact
-- [ ] **One-click Allowance approval gate** — detect if `allowance < amountIn`, prompt `approve()`, track authorization
-- [ ] **Slippage & transaction settings modal** — 0.1%, 0.5%, 1.0%, custom slippage tolerance + deadline timer
-- [ ] **Offline signing & execution pipeline** — construct EIP-1559 payload, sign in RAM via client vault, broadcast
-- [ ] **Swap receipt & history card** — visual route trace (`USDC → WETH → WBTC`), gas paid, confirmed output amount
+- [x] **Swap screen (`/swap`)** — From/To token selectors, live output quotation, exchange rate & price impact
+- [x] **One-click Allowance approval gate** — detect if `allowance < amountIn`, prompt `approve()`, track authorization
+- [x] **Slippage & transaction settings modal** — 0.1%, 0.5%, 1.0%, custom slippage tolerance + deadline timer
+- [x] **Offline signing & execution pipeline** — construct EIP-1559 payload, sign in RAM via client vault, broadcast
+- [x] **Swap receipt & history card** — visual route trace (`USDC → WETH → WBTC`), gas paid, confirmed output amount
 
 ## ✅ Definition of Done
 
-Perform an end-to-end multi-hop swap on Sepolia (e.g. Sepolia USDC → WETH → test token), verifying the one-transaction atomic execution, receipt event log decoding, and accurate balance updates in the Assets tab.
+- [x] Perform an end-to-end multi-hop swap on Sepolia (e.g. Sepolia USDC → WETH → test token), verifying the one-transaction atomic execution, receipt event log decoding, and accurate balance updates in the Assets tab.
 
 
 ---

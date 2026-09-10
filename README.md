@@ -35,7 +35,7 @@
 | **Phase 2** | EIP-1559 Transaction Anatomy, Gas Base Fee Burn, Priority Tips, ECDSA Secp256k1 Offline Signing | [📘 Phase 2 Handbook](./notes/phase2.md) |
 | **Phase 3** | Nonce Management, Mempool Race Conditions, Replacement & Cancellation, Block Confirmations | [📘 Phase 3 Handbook](./notes/phase3.md) |
 | **Phase 4** | Smart Contracts, 4-Byte EVM Calldata Selectors, ERC-20 Standard, Fixed-Point Arithmetic | [📘 Phase 4 Handbook](./notes/phase4.md) |
-| **Phase 5** | Blockchain Data Indexing, Blockscout REST API, Historical Ledger Caching, Activity Feeds | [📘 Phase 5 Handbook](./notes/phase5.md) |
+| **Phase 5** | On-Chain Swapping (DEX / AMM), Uniswap V2 Router & Factory, Multi-Hop Routing, Slippage Bounds | [📘 Phase 5 Handbook](./notes/phase5.md) |
 | **Math & Curves** | Secp256k1 Elliptic Curve Algebra, Discrete Logarithm Problem, Point Multiplication ($P = k \times G$) | [📘 Elliptic Curve Math](./notes/Maths_Eclliptic_curve.md) |
 | **Fundamentals** | Consensus Algorithms, Cryptographic Hashes, Peer-to-Peer Networks, Block Structures | [📘 Blockchain Core](./notes/fundamentals/blockchain.md) |
 
@@ -126,7 +126,19 @@ All cryptographic operations occur on-device. The only external traffic is raw b
 * **Multi-Chain Verified Registry**: Seamlessly handles testnet assets (Sepolia USDC, LINK, WETH) and Ethereum Mainnet assets (native ETH, USDC, USDT, WBTC, DAI).
 * **Custom Token Dynamic Import**: Paste any verified ERC-20 contract address to query `name()`, `symbol()`, `decimals()`, and `balanceOf(address)` directly from the blockchain state.
 
-### 5. Resilient Multi-Provider RPC Failover Tier
+### 5. On-Chain DEX Swapping & AMM Execution (Uniswap V2)
+* **Constant-Product Market Maker ($x \cdot y = k$)**: Executes on-chain token swaps with exact fee-adjusted output formulas:
+  $$\Delta y = \frac{y \cdot 997 \cdot \Delta x}{1000 \cdot x + 997 \cdot \Delta x}$$
+* **Canonical Multi-Hop Routing**: Automatically constructs multi-hop routes across Wrapped Ether (`[tokenIn, WETH, tokenOut]`) when direct liquidity pairs do not exist on the Uniswap V2 Factory.
+* **Two-Step Non-Custodial Authorization**:
+  1. *Allowance Check*: Queries on-chain ERC-20 `allowance(owner, router)`. If insufficient, prompts an atomic one-click `approve()` transaction.
+  2. *Router Execution*: Encodes 4-byte calldata for `swapExactETHForTokens`, `swapExactTokensForETH`, or `swapExactTokensForTokens`.
+* **Slippage Bounds & Liquidity Protection**:
+  $$\text{minAmountOut} = \text{expectedAmountOut} \times (1 - \text{slippageTolerance})$$
+  Enforces strictly on-chain slippage boundaries with zero fabricated math, alerting users to high price impact in low-depth pools.
+* **Network Support**: Configured for **Ethereum Mainnet** (`Chain ID 1` via official Uniswap Router `0x7a25...488D` with ETH, WETH, USDC, USDT, WBTC, DAI) and **Sepolia Testnet** (`Chain ID 11155111`).
+
+### 6. Resilient Multi-Provider RPC Failover Tier
 * **Zero-Downtime Fallback Transports**: Configures multi-node resilient fallback pools:
   * **Sepolia Testnet**: PublicNode, dRPC, and Ethereum Foundation (`rpc.sepolia.org`).
   * **Ethereum Mainnet**: LlamaRPC, Ankr, Cloudflare, with plug-and-play support for dedicated Alchemy or Infura nodes.
@@ -140,7 +152,7 @@ All cryptographic operations occur on-device. The only external traffic is raw b
 SafeX---Crypto-Wallet/
 ├── apps/
 │   ├── web/                        # Next.js 14 Client-Side Wallet Application
-│   │   ├── app/                    # App Router (Dashboard, Send, Receive, History, Status)
+│   │   ├── app/                    # App Router (Dashboard, Send, Receive, Swap, History, Status)
 │   │   ├── components/             # Reusable UI (TokenAssetsList, ChainSelector, VaultGate, QR)
 │   │   └── lib/
 │   │       ├── crypto/             # Pure client cryptography (BIP-39, HD Keys, Vault, EIP-1559)
