@@ -67,10 +67,13 @@ app.use(async (req: Request, res: Response, next: NextFunction) => {
       res.status(response.status)
       response.headers.forEach((val, key) => res.setHeader(key, val))
       const text = await response.text()
+      if (response.status >= 400) {
+        console.warn(`[SafeX Server] oRPC error on ${req.originalUrl} (${response.status}):`, text)
+      }
       return res.send(text)
     }
   } catch (error) {
-    // continue if not an oRPC procedure
+    console.error('[SafeX Server] oRPC middleware error:', error)
   }
   next()
 })

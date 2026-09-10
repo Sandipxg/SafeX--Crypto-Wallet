@@ -11,6 +11,10 @@ import {
   getTokenBalances,
   getTokenAllowance,
 } from '../../core/blockchain/read/tokens.js'
+import { fetchSwapQuote } from '../../core/blockchain/swap/quote.js'
+import { buildSwapTransaction } from '../../core/blockchain/swap/swapBuilder.js'
+import { decodeSwapReceipt } from '../../core/blockchain/swap/receiptParser.js'
+import { getDexTokens, getDexConfig } from '../../core/blockchain/swap/constants.js'
 
 export const walletRouter = {
   getBalance: os.handler(async (rawInput: unknown) => {
@@ -76,12 +80,20 @@ export const walletRouter = {
   }),
 
   getTokenBalances: os.handler(async (rawInput: unknown) => {
-    const input = rawInput as {
-      walletAddress: string
-      tokenAddresses: string[]
-      chainId?: number
+    try {
+      const input = rawInput as {
+        walletAddress?: string
+        tokenAddresses?: string[]
+        chainId?: number
+      }
+      if (!input?.walletAddress || !Array.isArray(input.tokenAddresses)) {
+        return []
+      }
+      return await getTokenBalances(input.walletAddress, input.tokenAddresses, input.chainId ?? 11155111)
+    } catch (err) {
+      console.error('[getTokenBalances] Failed:', err)
+      return []
     }
-    return await getTokenBalances(input.walletAddress, input.tokenAddresses, input.chainId ?? 11155111)
   }),
 
   getTokenAllowance: os.handler(async (rawInput: unknown) => {
@@ -98,4 +110,52 @@ export const walletRouter = {
       input.chainId ?? 11155111
     )
   }),
+
+  getSwapQuote: os.handler(async (rawInput: unknown) => {
+    const input = rawInput as {
+      tokenInAddress: string
+      tokenOutAddress: string
+      amountInFormatted?: string
+      amountOutFormatted?: string
+      mode?: 'EXACT_IN' | 'EXACT_OUT'
+      slippageTolerancePercent?: number
+      chainId?: number
+    }
+    return await fetchSwapQuote(input)
+  }),
+
+  buildSwapTx: os.handler(async (rawInput: unknown) => {
+    try {
+      const input = rawInput as {
+        userAddress: string
+        tokenInAddress: string
+        tokenOutAddress: string
+        amountInFormatted: string
+        slippageTolerancePercent?: number
+        deadlineMinutes?: number
+        chainId?: number
+      }
+      return await buildSwapTransaction(input)
+    } catch (err) {
+      console.error('[buildSwapTx] Failed to build swap transaction:', err)
+      throw err
+    }
+  }),
+
+  decodeSwapReceipt: os.handler(async (rawInput: unknown) => {
+    const input = rawInput as {
+      hash: string
+      chainId?: number
+    }
+    return await decodeSwapReceipt(input.hash, input.chainId ?? 11155111)
+  }),
+
+  getAvailableTokens: os.handler(async (rawInput: unknown) => {
+    const input = rawInput as { chainId?: number } | undefined
+    const chainId = input?.chainId ?? 11155111
+    const tokens = getDexTokens(chainId)
+    const config = getDexConfig(chainId)
+    return { tokens, config }
+  }),
 }
+

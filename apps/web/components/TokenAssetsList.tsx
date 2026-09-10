@@ -207,11 +207,15 @@ export function TokenAssetsList({
                       <span className="text-xs font-normal text-slate-400">{item.token.symbol}</span>
                     </span>
 
-                    {item.usdValue && Number(item.usdValue) > 0 && (
-                      <span className="text-[11px] text-emerald-400 font-mono shrink-0">
-                        ${item.usdValue}
-                      </span>
-                    )}
+                    <span className="text-[11px] font-mono shrink-0">
+                      {item.usdValue?.startsWith('<') ? (
+                        <span className="text-emerald-400 font-semibold">{item.usdValue}</span>
+                      ) : Number(item.usdValue || '0') > 0 ? (
+                        <span className="text-emerald-400 font-semibold">${item.usdValue}</span>
+                      ) : (
+                        <span className="text-slate-500 font-normal">$0.00</span>
+                      )}
+                    </span>
                   </div>
                 </div>
 

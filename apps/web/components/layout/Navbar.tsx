@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Shield, Activity, Wallet } from 'lucide-react'
+import { Shield, Activity, Wallet, ArrowLeftRight } from 'lucide-react'
 
 export function Navbar() {
   return (
@@ -24,6 +24,13 @@ export function Navbar() {
             <span>Dashboard</span>
           </Link>
           <Link
+            href="/swap"
+            className="flex items-center gap-1.5 text-sm font-medium text-slate-300 hover:text-brand-400 transition"
+          >
+            <ArrowLeftRight className="w-4 h-4" />
+            <span>Swap</span>
+          </Link>
+          <Link
             href="/status"
             className="flex items-center gap-1.5 text-sm font-medium text-slate-300 hover:text-brand-500 transition"
           >
@@ -35,3 +42,4 @@ export function Navbar() {
     </header>
   )
 }
+

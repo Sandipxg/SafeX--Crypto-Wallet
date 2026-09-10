@@ -14,6 +14,8 @@ import {
   ArrowDownLeft,
   Database,
   Globe,
+  ArrowLeftRight,
+  Lock,
 } from 'lucide-react'
 import { useVaultStore } from '@/lib/store/useVaultStore'
 import { ClientTxRecord, syncPendingClientTxs } from '@/lib/crypto'
@@ -143,10 +145,16 @@ export default function HistoryPage() {
                     })
                   : 'Recent'
 
-                const isToken = Boolean(tx.tokenSymbol)
+                const isSwap = Boolean(tx.tokenSymbol?.includes('→'))
+                const isApproval = Boolean(tx.tokenAmount?.includes('Approve') || tx.tokenSymbol?.includes('Approve'))
+                const isToken = Boolean(tx.tokenSymbol) && !isSwap && !isApproval
                 const displaySymbol = tx.tokenSymbol || 'ETH'
                 const displayAmount = tx.tokenAmount || tx.valueEth
-                const actionLabel = isOutgoing
+                const actionLabel = isSwap
+                  ? `Swap ${tx.tokenSymbol}`
+                  : isApproval
+                  ? `Approved ${tx.tokenSymbol}`
+                  : isOutgoing
                   ? `Sent ${displaySymbol}`
                   : `Received ${displaySymbol}`
 
@@ -155,12 +163,24 @@ export default function HistoryPage() {
                     <div className="flex items-center gap-3">
                       <div
                         className={`p-2.5 rounded-xl border ${
-                          isOutgoing
+                          isSwap
+                            ? 'bg-brand-500/10 text-brand-400 border-brand-500/20'
+                            : isApproval
+                            ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+                            : isOutgoing
                             ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                             : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                         }`}
                       >
-                        {isOutgoing ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownLeft className="w-4 h-4" />}
+                        {isSwap ? (
+                          <ArrowLeftRight className="w-4 h-4" />
+                        ) : isApproval ? (
+                          <Lock className="w-4 h-4" />
+                        ) : isOutgoing ? (
+                          <ArrowUpRight className="w-4 h-4" />
+                        ) : (
+                          <ArrowDownLeft className="w-4 h-4" />
+                        )}
                       </div>
 
                       <div>
@@ -168,11 +188,19 @@ export default function HistoryPage() {
                           <span className="text-xs font-bold text-white">
                             {actionLabel}
                           </span>
-                          {isToken && (
+                          {isSwap ? (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand-500/10 text-brand-400 border border-brand-500/20 font-mono font-semibold">
+                              DEX Swap
+                            </span>
+                          ) : isApproval ? (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-mono font-semibold">
+                              Approval
+                            </span>
+                          ) : isToken ? (
                             <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono font-semibold">
                               ERC-20
                             </span>
-                          )}
+                          ) : null}
                           <span
                             className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
                               tx.status === 'confirmed'

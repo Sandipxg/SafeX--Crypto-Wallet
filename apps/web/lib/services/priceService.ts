@@ -1,6 +1,7 @@
 export interface MarketPrices {
   ethereumUsd: number
   bitcoinUsd: number
+  chainlinkUsd: number
   updatedAt: number
 }
 
@@ -11,7 +12,7 @@ const CACHE_TTL_MS = 60 * 1000 // 60 seconds TTL
  * ============================================================================
  * fetchMarketPrices(): Promise<MarketPrices>
  * ============================================================================
- * @description Fetches live ETH & BTC USD spot rates from CoinGecko API.
+ * @description Fetches live ETH, BTC & LINK USD spot rates from CoinGecko API.
  *              Caches responses in memory for 60 seconds to avoid API throttling.
  */
 export async function fetchMarketPrices(): Promise<MarketPrices> {
@@ -22,7 +23,7 @@ export async function fetchMarketPrices(): Promise<MarketPrices> {
 
   try {
     const res = await fetch(
-      'https://api.coingecko.com/api/v3/simple/price?ids=ethereum,bitcoin&vs_currencies=usd',
+      'https://api.coingecko.com/api/v3/simple/price?ids=ethereum,bitcoin,chainlink&vs_currencies=usd',
       { headers: { Accept: 'application/json' } }
     )
 
@@ -33,10 +34,12 @@ export async function fetchMarketPrices(): Promise<MarketPrices> {
     const data = await res.json()
     const ethereumUsd = Number(data.ethereum?.usd) || 2500
     const bitcoinUsd = Number(data.bitcoin?.usd) || 65000
+    const chainlinkUsd = Number(data.chainlink?.usd) || 14.50
 
     cachedPrices = {
       ethereumUsd,
       bitcoinUsd,
+      chainlinkUsd,
       updatedAt: now,
     }
 
@@ -47,6 +50,7 @@ export async function fetchMarketPrices(): Promise<MarketPrices> {
     return {
       ethereumUsd: cachedPrices?.ethereumUsd || 2500,
       bitcoinUsd: cachedPrices?.bitcoinUsd || 65000,
+      chainlinkUsd: cachedPrices?.chainlinkUsd || 14.50,
       updatedAt: now,
     }
   }

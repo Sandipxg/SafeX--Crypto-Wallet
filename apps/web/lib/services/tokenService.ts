@@ -59,9 +59,11 @@ export async function fetchUserTokensAndBalances(
 
   // 2. Fetch live market prices to compute USD equivalent
   let ethUsd = 2500
+  let linkUsd = 14.50
   try {
     const market = await fetchMarketPrices()
     if (market?.ethereumUsd) ethUsd = market.ethereumUsd
+    if (market?.chainlinkUsd) linkUsd = market.chainlinkUsd
   } catch {
     // default fallback
   }
@@ -71,16 +73,24 @@ export async function fetchUserTokensAndBalances(
     const num = Number(formattedBal)
     if (isNaN(num) || num <= 0) return '0.00'
     const sym = symbol.toUpperCase()
+
+    let val = 0
     if (sym === 'USDC' || sym === 'USDT' || sym === 'DAI') {
-      return num.toFixed(2)
+      val = num
+    } else if (sym === 'WETH' || sym === 'ETH') {
+      val = num * ethUsd
+    } else if (sym === 'WBTC') {
+      val = num * (ethUsd * 25)
+    } else if (sym === 'LINK') {
+      val = num * linkUsd
+    } else {
+      val = num * 1.5
     }
-    if (sym === 'WETH' || sym === 'ETH') {
-      return (num * ethUsd).toFixed(2)
+
+    if (val > 0 && val < 0.01) {
+      return '< 0.01'
     }
-    if (sym === 'WBTC') {
-      return (num * (ethUsd * 25)).toFixed(2)
-    }
-    return (num * 1.5).toFixed(2)
+    return val.toFixed(2)
   }
 
   // 3. Query balances (Server oRPC -> Browser Fallback)

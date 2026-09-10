@@ -15,6 +15,7 @@ import {
   Wallet,
   QrCode,
   X,
+  ArrowLeftRight,
 } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useVaultStore } from '@/lib/store/useVaultStore'
@@ -317,23 +318,23 @@ export default function DashboardPage() {
           )}
 
           {/* Card Bottom: Action Buttons Row */}
-          <div className="grid grid-cols-3 gap-3 pt-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
             <Link
               href={isBitcoin ? '/receive' : '/send'}
-              className={`py-3 px-4 rounded-xl text-white text-xs font-semibold transition shadow-lg flex items-center justify-center gap-2 ${
+              className={`py-3 px-3 rounded-xl text-white text-xs font-semibold transition shadow-lg flex items-center justify-center gap-1.5 ${
                 isBitcoin
                   ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-600/20'
                   : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/20'
               }`}
             >
               {isBitcoin ? <ArrowDownLeft className="w-4 h-4" /> : <Send className="w-4 h-4" />}
-              <span>{isBitcoin ? 'Deposit BTC' : 'Send'}</span>
+              <span>{isBitcoin ? 'Deposit' : 'Send'}</span>
             </Link>
 
             <button
               type="button"
               onClick={() => setShowQrCode((prev) => !prev)}
-              className={`py-3 px-4 rounded-xl text-xs font-semibold border transition flex items-center justify-center gap-2 ${
+              className={`py-3 px-3 rounded-xl text-xs font-semibold border transition flex items-center justify-center gap-1.5 ${
                 showQrCode
                   ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
                   : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
@@ -344,8 +345,16 @@ export default function DashboardPage() {
             </button>
 
             <Link
+              href="/swap"
+              className="py-3 px-3 rounded-xl bg-brand-600/20 hover:bg-brand-600/30 text-brand-400 text-xs font-semibold border border-brand-500/30 transition flex items-center justify-center gap-1.5 shadow-sm"
+            >
+              <ArrowLeftRight className="w-4 h-4" />
+              <span>Swap</span>
+            </Link>
+
+            <Link
               href="/history"
-              className="py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition flex items-center justify-center gap-2"
+              className="py-3 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition flex items-center justify-center gap-1.5"
             >
               <History className="w-4 h-4" />
               <span>History</span>
