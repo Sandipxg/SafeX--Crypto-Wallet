@@ -4,13 +4,13 @@ This document tracks concepts to learn **and** the feature to ship immediately a
 Every phase (except Phase 5, flagged below) ends with a real, clickable feature in the browser — not just a backend module.
 By the final phase, the app is a complete, self-custody-wallet + custodial-exchange hybrid, ready for real-world (testnet-first) transactions.
 
-> **Scope note:** This is a learning/portfolio build. Everything from Phase 6 onward mirrors real exchange
+> **Scope note:** This is a learning/portfolio build. Everything from Phase 8 onward mirrors real exchange
 > custody/ledger architecture — going live with real user funds would need licensing, audits, and legal review
 > far beyond what's tracked here.
 
-> **Chain scope:** EVM + Bitcoin are the core scope through Phase 12. Solana + Tron are deferred to Phase 13 (optional stretch phase) at the end of the roadmap.
+> **Chain scope:** EVM + Bitcoin are the core scope through Phase 13. Solana + Tron are deferred to Phase 15 (optional stretch phase) at the end of the roadmap.
 
-> **Stack:** Backend — Node.js + TypeScript + oRPC + PostgreSQL (Orchid/Drizzle) + Redis (Phase 6+) + Kafka (Phase 8+).
+> **Stack:** Backend — Node.js + TypeScript + oRPC + PostgreSQL (Orchid/Drizzle) + Redis (Phase 8+) + Kafka (Phase 10+).
 > Frontend — Next.js (App Router) + TypeScript + Tailwind + shadcn/ui, talking to the backend over the oRPC client
 > + WebSockets for live data. Every phase's UI is a real page in this same app, not a demo/prototype.
 
@@ -235,10 +235,52 @@ Same test as Phase 3, but on Bitcoin testnet, using the same Send/Receive UI wit
 
 ---
 
-# 🧪 Phase 6: Smart Contract Security Lab (internal — no UI)
+# 🧱 Phase 6: Solidity Lab (EVM Programming Foundations)
+
+_This phase is a separate learning workspace from SafeX. Build tiny contracts, inspect storage, debug execution, and learn Solidity from the EVM's perspective before entering Smart Contract Security._
+
+## Learn
+
+- [ ] Solidity syntax, compiler pipeline (`.sol → Bytecode + ABI`), and project structure (Foundry/Anvil)
+- [ ] State Variables, Functions, Visibility (`public`, `external`, `internal`, `private`), Constructors
+- [ ] EVM execution context (`msg.sender`, `msg.value`, `tx.origin`, `block.timestamp`, `block.number`)
+- [ ] Storage vs Memory vs Calldata — persistence, gas costs, and reference/value semantics
+- [ ] Value types vs Reference types (`uint256`, `address`, `bool`, `bytes32`, `string`, `struct`, `array`, `mapping`)
+- [ ] Payable functions, native ETH transfers, `receive()` and `fallback()`
+- [ ] Contract-to-contract calls, Interfaces, `CALL`, `STATICCALL`, and low-level calls
+- [ ] Events, Custom Errors, `require`, `revert`, `assert`, and gas refunds
+- [ ] Modifiers, Inheritance, Libraries, and OpenZeppelin contract patterns
+
+## Build — Backend (Solidity Lab Only)
+
+- [ ] HelloStorage — write/read state variables and inspect storage slots in Anvil
+- [ ] Counter Contract — increment, decrement, reset, constructor initialization, custom errors
+- [ ] PiggyBank — deposit ETH, withdraw ETH, track balances with `mapping(address => uint256)`
+- [ ] AddressBook — structs, arrays, mappings, CRUD operations, storage vs memory behavior
+- [ ] Mini ERC-20 — implement `balanceOf`, `transfer`, `approve`, `allowance`, `transferFrom`
+- [ ] Vault Contract — learn `receive()` and `fallback()` by sending ETH with different calldata
+- [ ] Messenger Contracts — two contracts interacting through interfaces and external calls
+- [ ] Event Playground — emit and decode events locally using Foundry tests and transaction receipts
+
+## Build — Frontend
+
+> _No frontend in this phase. Interact entirely through Foundry tests, Anvil console, and Viem scripts._
+
+- [ ] Write deployment scripts using Viem/Foundry
+- [ ] Read storage directly with `cast storage`
+- [ ] Call contract functions using `cast call` and `cast send`
+- [ ] Inspect transaction traces and emitted event logs
+
+## ✅ Definition of Done
+
+Deploy and interact with multiple Solidity contracts on a local Anvil blockchain, inspect their storage and execution traces, understand how calldata becomes EVM execution, and comfortably write and test contracts before beginning Smart Contract Security.
+
+---
+
+# 🧪 Phase 7: Smart Contract Security Lab (internal — no UI)
 
 _This phase is dev-tooling for your own understanding, not a user-facing feature. It's here so the vulnerability
-concepts are fresh before Phase 7's custodial infrastructure, which is where a security mistake would matter most._
+concepts are fresh before Phase 8's custodial infrastructure, which is where a security mistake would matter most._
 
 ## Learn
 
@@ -257,7 +299,7 @@ Your own written test exploits a real vulnerability in a local contract, then fa
 
 ---
 
-# 🚜 Phase 7: Custodial Deposits & Exchange Balance
+# 🚜 Phase 8: Custodial Deposits & Exchange Balance
 
 _This is where the app splits into two coexisting halves: the self-custody **Wallet** (Phases 1–5, user controls
 keys) and the custodial **Exchange** (this phase onward, SafeX holds funds and tracks balances internally). Both
@@ -296,7 +338,7 @@ Send testnet funds to the Exchange deposit address (not the personal wallet addr
 
 ---
 
-# ⚖️ Phase 8: Double-Entry Ledger & Balance Locking
+# ⚖️ Phase 9: Double-Entry Ledger & Balance Locking
 
 ## Learn
 
@@ -326,7 +368,7 @@ Send an internal transfer to a second test account entirely off-chain, see both 
 
 ---
 
-# ⚡ Phase 9: Trading — Order Book & Matching Engine
+# ⚡ Phase 10: Trading — Order Book & Matching Engine
 
 ## Learn
 
@@ -345,7 +387,7 @@ Send an internal transfer to a second test account entirely off-chain, see both 
 - [ ] Order placement/cancellation endpoints
 - [ ] WebSocket server broadcasting order book depth & ticker
 - [ ] Kafka producer for matches + settlement consumer
-- [ ] Ledger settlement integration (atomic buyer/seller balance updates via Phase 8's ledger)
+- [ ] Ledger settlement integration (atomic buyer/seller balance updates via Phase 9's ledger)
 - [ ] Elasticsearch audit logger
 
 ## Build — Frontend
@@ -356,11 +398,11 @@ Send an internal transfer to a second test account entirely off-chain, see both 
 
 ## ✅ Definition of Done
 
-Two test accounts place opposing limit orders through the Trade screen; they match, the trade settles atomically, and both accounts' Balance pages (Phase 8) update live via WebSocket with no page refresh.
+Two test accounts place opposing limit orders through the Trade screen; they match, the trade settles atomically, and both accounts' Balance pages (Phase 9) update live via WebSocket with no page refresh.
 
 ---
 
-# 💸 Phase 10: Withdrawals, Reconciliation & Circuit Breakers
+# 💸 Phase 11: Withdrawals, Reconciliation & Circuit Breakers
 
 ## Learn
 
@@ -371,7 +413,7 @@ Two test accounts place opposing limit orders through the Trade screen; they mat
 
 ## Build — Backend
 
-- [ ] Withdrawal request → approval → on-chain payout pipeline (reuses Phase 7 hot wallet + Phase 3/3.5 tx builders)
+- [ ] Withdrawal request → approval → on-chain payout pipeline (reuses Phase 8 hot wallet + Phase 3/3.5 tx builders)
 - [ ] Daily reconciliation worker (DB balances vs live vault balances)
 - [ ] Emergency circuit breaker (auto-halt withdrawals on drift)
 - [ ] Merkle-tree Proof of Reserves generator
@@ -388,7 +430,7 @@ Withdraw testnet funds from Exchange balance to an external address and see it l
 
 ---
 
-# 🛡️ Phase 11: Enterprise Key Custody & Infra Hardening
+# 🛡️ Phase 12: Enterprise Key Custody & Infra Hardening
 
 ## Learn
 
@@ -422,7 +464,7 @@ A push to `main` runs CI, builds a container, deploys to a local/staging cluster
 
 ---
 
-# 📈 Phase 12: Compliance — KYC & AML
+# 📈 Phase 13: Compliance — KYC & AML
 
 ## Learn
 
@@ -447,7 +489,7 @@ A new account is withdrawal-limited until KYC is submitted and approved through 
 
 ---
 
-# 📊 Phase 13: Trading+ — Charts, Margin & Liquidations (stretch)
+# 📊 Phase 14: Trading+ — Charts, Margin & Liquidations (stretch)
 
 ## Learn
 
@@ -471,9 +513,9 @@ A simulated leveraged position breaches its maintenance margin and the liquidati
 
 ---
 
-# 🔀 Phase 14: Multi-Chain Expansion — Solana & Tron (Optional Stretch Goal)
+# 🔀 Phase 15: Multi-Chain Expansion — Solana & Tron (Optional Stretch Goal)
 
-_Deferred until the primary EVM+Bitcoin wallet and exchange features (Phases 1–12) are fully working end-to-end._
+_Deferred until the primary EVM+Bitcoin wallet and exchange features (Phases 1–13) are fully working end-to-end._
 
 ## Learn
 
