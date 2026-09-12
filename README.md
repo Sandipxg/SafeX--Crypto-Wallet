@@ -152,14 +152,14 @@ All cryptographic operations occur on-device. The only external traffic is raw b
 SafeX---Crypto-Wallet/
 ├── apps/
 │   ├── web/                        # Next.js 14 Client-Side Wallet Application
-│   │   ├── app/                    # App Router (Dashboard, Send, Receive, Swap, History, Status)
-│   │   ├── components/             # Reusable UI (TokenAssetsList, ChainSelector, VaultGate, QR)
-│   │   └── lib/
-│   │       ├── crypto/             # Pure client cryptography (BIP-39, HD Keys, Vault, EIP-1559)
-│   │       └── services/           # History, token registry, price service
+│   │   ├── app/                    # Next.js App Router (Dashboard, Send, Receive, Swap, History, Status)
+│   │   ├── components/             # Shared UI (ChainSelector, BackToDashboard, VaultGate, QR)
+│   │   ├── core/                   # Core cryptography (BIP-39, HD Keys, Vault, EIP-1559, oRPC client, utils)
+│   │   └── features/               # Feature-driven modules (swap, send, receive, tokens, history, dashboard)
 │   └── server/                     # Lightweight Blockchain Helper & Broadcast Node
 │       └── src/
-│           └── core/blockchain/    # RPC clients, gas estimation, read/write procedures
+│           ├── core/               # Blockchain RPC fallback clients, gas estimation, base oRPC server
+│           └── features/           # Modular backend feature routers (swap, tokens, prices, history, health, wallet)
 ├── notes/                          # Deep Technical Handbooks (Phases 1–5), Math Proofs, Infographics
 └── Plan/                           # Project Roadmap & Implementation Tracker
 ```
@@ -227,11 +227,17 @@ Open your browser to:
 
 ## 🧪 Testing & Verification
 
-Run the client-side cryptographic test suite:
+Run the full monorepo test suite or individual workspace tests:
 
 ```bash
-# Execute unit tests for BIP-39, HD derivation, and AES-GCM vault security
-npm run test --workspace=@safex/web
+# Execute all unit tests across the entire monorepo (15 test suites)
+npm test
+
+# Frontend unit tests (BIP-39, HD keys, AES-GCM vault, token encoder, format & explorer)
+npm --prefix apps/web test
+
+# Backend unit tests (swap services, wallet services, tokens, prices, history, health)
+npm --prefix apps/server test
 ```
 
 ---
