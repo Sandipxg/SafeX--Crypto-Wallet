@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Lock, Key, AlertCircle, Eye, EyeOff, ShieldCheck, Trash2, ArrowRight } from 'lucide-react'
-import { useVaultStore } from '@/lib/store/useVaultStore'
+import { useVaultStore } from '@/core/store/useVaultStore'
 
 interface VaultGateProps {
   children: React.ReactNode

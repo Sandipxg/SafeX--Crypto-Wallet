@@ -1,0 +1,265 @@
+'use client'
+
+import React, { useState } from 'react'
+import Link from 'next/link'
+import {
+  Send,
+  ArrowDownLeft,
+  History,
+  RefreshCw,
+  Copy,
+  Check,
+  TrendingUp,
+  QrCode,
+  ArrowLeftRight,
+} from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
+import { useCopyToClipboard } from '@/core'
+
+interface PortfolioCardProps {
+  isBitcoin: boolean
+  isMainnet: boolean
+  activeSymbol: string
+  activeNativeBalanceStr: string
+  activeRate: number
+  formattedUsdValue: string
+  activeAddressDisplay?: string | null
+  isFetchingBalance: boolean
+  onRefresh: () => void
+}
+
+export function PortfolioCard({
+  isBitcoin,
+  isMainnet,
+  activeSymbol,
+  activeNativeBalanceStr,
+  activeRate,
+  formattedUsdValue,
+  activeAddressDisplay,
+  isFetchingBalance,
+  onRefresh,
+}: PortfolioCardProps) {
+  const { isCopied: hasCopied, copy: copyToClipboard } = useCopyToClipboard()
+  const [showQrCode, setShowQrCode] = useState(false)
+
+  return (
+    <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900/95 to-slate-800/80 border border-slate-800 shadow-2xl relative overflow-hidden backdrop-blur-xl space-y-6">
+      {/* Card Top: Asset & Network Metadata */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div
+            className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-xl border ${
+              isBitcoin
+                ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+            }`}
+          >
+            {isBitcoin ? '₿' : 'Ξ'}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-white">
+                {isBitcoin ? 'Bitcoin Native SegWit' : 'Ethereum (EVM)'}
+              </h2>
+              <span
+                className={`text-[10px] px-2.5 py-0.5 rounded-full font-mono font-semibold border ${
+                  isBitcoin
+                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                    : isMainnet
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                    : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                }`}
+              >
+                {isBitcoin
+                  ? 'SegWit bech32'
+                  : isMainnet
+                  ? 'Mainnet'
+                  : 'Sepolia Testnet'}
+              </span>
+            </div>
+            <span className="text-[11px] text-slate-400 font-mono">
+              {isBitcoin ? "BIP-84 • m/84'/0'/0'/0/0" : "BIP-44 • m/44'/60'/0'/0/0"}
+            </span>
+          </div>
+        </div>
+
+        {/* Refresh Button */}
+        <button
+          onClick={onRefresh}
+          disabled={isFetchingBalance}
+          className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/60 transition shadow-sm"
+          title="Sync Latest Balances"
+        >
+          <RefreshCw className={`w-4 h-4 ${isFetchingBalance ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
+
+      {/* Card Middle: Large Balance & Live Ticker */}
+      <div className="space-y-2 py-2">
+        <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+          Total Balance
+        </span>
+
+        {/* Big USD Display */}
+        <div className="flex items-baseline gap-2">
+          <span className="text-4xl sm:text-5xl font-extrabold text-white font-mono tracking-tight">
+            ${formattedUsdValue}
+          </span>
+          <span className="text-sm font-bold text-slate-400">USD</span>
+        </div>
+
+        {/* Native Balance & Spot Ticker */}
+        <div className="flex items-center gap-3 pt-1 text-xs text-slate-400">
+          <span className="font-mono text-slate-200 font-semibold text-sm">
+            {activeNativeBalanceStr} {activeSymbol}
+          </span>
+          <span className="text-slate-600">•</span>
+          <div
+            className={`flex items-center gap-1 font-mono ${
+              isBitcoin ? 'text-amber-400' : 'text-emerald-400'
+            }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>
+              1 {activeSymbol} ≈ ${activeRate.toLocaleString()}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Card Inner: Integrated Public Address Bar */}
+      <div className="p-3.5 sm:p-4 rounded-2xl bg-dark-bg/90 border border-dark-border/80 flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0 flex-1 space-y-1">
+          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">
+            Public Receiving Address
+          </span>
+          <span className="font-mono text-xs text-slate-200 truncate block">
+            {activeAddressDisplay || 'Address not loaded'}
+          </span>
+        </div>
+
+        {activeAddressDisplay && (
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => copyToClipboard(activeAddressDisplay)}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-semibold transition flex items-center gap-1.5 shadow-sm ${
+                hasCopied
+                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+              }`}
+              title="Copy Address to Clipboard"
+            >
+              {hasCopied ? (
+                <>
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Copied</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>Copy</span>
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowQrCode((prev) => !prev)}
+              className={`p-2 rounded-xl border transition ${
+                showQrCode
+                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+              }`}
+              title={showQrCode ? 'Hide Deposit QR Code' : 'Show Deposit QR Code'}
+            >
+              <QrCode className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Inline Expandable QR Code Section */}
+      {showQrCode && activeAddressDisplay && (
+        <div className="p-6 rounded-2xl bg-dark-bg/95 border border-dark-border flex flex-col sm:flex-row items-center justify-center gap-6 animate-in fade-in zoom-in-95 duration-200">
+          <div className="p-3 bg-white rounded-2xl shadow-xl shrink-0">
+            <QRCodeSVG value={activeAddressDisplay} size={150} level="M" marginSize={1} />
+          </div>
+          <div className="space-y-2 text-center sm:text-left">
+            <div className="flex items-center justify-center sm:justify-start gap-2">
+              <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                Deposit {activeSymbol}
+              </span>
+            </div>
+            <h4 className="text-sm font-bold text-white">Scan to Receive Funds</h4>
+            <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
+              Scan this QR code with your mobile wallet or exchange app to deposit funds directly
+              to your SafeX address.
+            </p>
+            <div className="pt-1 flex flex-wrap items-center justify-center sm:justify-start gap-2">
+              <button
+                type="button"
+                onClick={() => copyToClipboard(activeAddressDisplay)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-emerald-400 border border-slate-700 transition"
+              >
+                {hasCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{hasCopied ? 'Copied!' : 'Copy Address'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowQrCode(false)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-400 hover:text-white border border-slate-700 transition"
+              >
+                <span>Hide QR</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Card Bottom: Action Buttons Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+        <Link
+          href={isBitcoin ? '/receive' : '/send'}
+          className={`py-3 px-3 rounded-xl text-white text-xs font-semibold transition shadow-lg flex items-center justify-center gap-1.5 ${
+            isBitcoin
+              ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-600/20'
+              : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/20'
+          }`}
+        >
+          {isBitcoin ? <ArrowDownLeft className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+          <span>{isBitcoin ? 'Deposit' : 'Send'}</span>
+        </Link>
+
+        <button
+          type="button"
+          onClick={() => setShowQrCode((prev) => !prev)}
+          className={`py-3 px-3 rounded-xl text-xs font-semibold border transition flex items-center justify-center gap-1.5 ${
+            showQrCode
+              ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+              : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+          }`}
+        >
+          <ArrowDownLeft className="w-4 h-4 text-emerald-400" />
+          <span>{showQrCode ? 'Hide QR' : 'Receive'}</span>
+        </button>
+
+        <Link
+          href="/swap"
+          className="py-3 px-3 rounded-xl bg-brand-600/20 hover:bg-brand-600/30 text-brand-400 text-xs font-semibold border border-brand-500/30 transition flex items-center justify-center gap-1.5 shadow-sm"
+        >
+          <ArrowLeftRight className="w-4 h-4" />
+          <span>Swap</span>
+        </Link>
+
+        <Link
+          href="/history"
+          className="py-3 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition flex items-center justify-center gap-1.5"
+        >
+          <History className="w-4 h-4" />
+          <span>History</span>
+        </Link>
+      </div>
+    </div>
+  )
+}

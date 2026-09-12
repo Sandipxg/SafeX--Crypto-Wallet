@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { fetchHealthStatus } from '@/features/health/api/health'
+import { fetchHealthStatus } from '../services/healthService'
 import { Server, Database, Clock, RefreshCw, CheckCircle2, XCircle } from 'lucide-react'
 
 export function StatusCard() {

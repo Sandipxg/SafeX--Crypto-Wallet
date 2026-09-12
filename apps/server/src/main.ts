@@ -5,6 +5,7 @@ import { config } from './core/config/env.js'
 import { healthService } from './features/health/services/health.service.js'
 import { createFetchHandler } from '@orpc/server/fetch'
 import { appRouter } from './router.js'
+import type { ORPCContext } from './core/orpc/server.js'
 
 const app = express()
 
@@ -62,7 +63,12 @@ app.use(async (req: Request, res: Response, next: NextFunction) => {
       body: hasBody ? JSON.stringify(req.body) : undefined
     })
 
-    const response = await orpcHandler({ request, context: undefined })
+    const context: ORPCContext = {
+      clientIp: req.ip,
+      timestamp: Date.now(),
+    }
+
+    const response = await orpcHandler({ request, context })
     if (response && response.status !== 404) {
       res.status(response.status)
       response.headers.forEach((val, key) => res.setHeader(key, val))

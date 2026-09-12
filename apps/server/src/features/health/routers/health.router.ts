@@ -1,4 +1,4 @@
-import { os } from '@orpc/server'
+import { os } from '../../../core/orpc/server.js'
 import { healthService } from '../services/health.service.js'
 
 export const healthProcedure = os.handler(async () => {

@@ -22,13 +22,13 @@ describe('Backend Blockchain Services Tests', () => {
     expect(res.address).toBe(validAddress)
     expect(res.wei).toBeDefined()
     expect(res.formattedEth).toBeDefined()
-  })
+  }, 15000)
 
   it('should fetch pending account nonce from Sepolia testnet', async () => {
     const nonce = await getPendingNonce(validAddress, 11155111)
     expect(typeof nonce).toBe('number')
     expect(nonce).toBeGreaterThanOrEqual(0)
-  })
+  }, 15000)
 
   it('should estimate EIP-1559 gas fees for standard ETH transfer', async () => {
     const to = '0x1234567890123456789012345678901234567890'
@@ -37,5 +37,5 @@ describe('Backend Blockchain Services Tests', () => {
     expect(gasEst.maxFeePerGas).toBeDefined()
     expect(gasEst.maxPriorityFeePerGas).toBeDefined()
     expect(gasEst.estimatedGasUnits).toBe('21000')
-  })
+  }, 15000)
 })
