@@ -77,8 +77,8 @@ flowchart LR
 | Layer | Technology | Content | Durability & Scope |
 |---|---|---|---|
 | **1. At Rest** | **IndexedDB** | AES-256-GCM encrypted ciphertext, 16B salt, 12B IV, 16B auth tag, Argon2 parameters | Permanent on that browser until manually wiped or browser data cleared. |
-| **2. Ephemeral Tab** | **`sessionStorage`** | Decrypted credentials payload with `expiresAt` timestamp (10-minute rolling timer) | **Tab-isolated.** Survives `F5` reload within the tab; destroyed the instant the tab is closed. |
-| **3. Runtime Memory** | **Zustand (RAM)** | Reactive status (`vaultState: 'UNLOCKED' \| 'LOCKED'`), `activeAddress`, `decryptedMnemonic` | Pure JavaScript memory. Cleared whenever the page unloads or F5 is pressed. |
+| **2. Ephemeral Tab** | **`sessionStorage`** | Public session payload (`address`, `btcAddress`, `publicKey`) + `expiresAt` timestamp (10m TTL). **Never stores seed phrase or private keys.** | **Tab-isolated.** Survives `F5` reload within the tab; destroyed the instant the tab is closed. Immune to XSS seed phrase exfiltration. |
+| **3. Runtime Memory** | **Zustand (RAM)** | Reactive status (`vaultState: 'UNLOCKED' \| 'LOCKED'`), `activeAddress`, `activeBtcAddress`, `activePublicKey` | Pure JavaScript memory. Cleared whenever the page unloads or F5 is pressed. |
 
 ### Why `sessionStorage`?
 1. **Survives Reloads (`F5`):** If state were kept *only* in JavaScript memory (Zustand), pressing `F5` or navigating between pages would lock the wallet and require password re-entry on every refresh.
@@ -117,7 +117,8 @@ sequenceDiagram
         UI-->>User: Displays error message
     else Decryption Succeeds
         Crypto-->>Store: Returns { mnemonic, address, btcAddress, publicKey }
-        Store->>Tab: saveSessionToStorage(payload, ttl = 10m)
+        Store->>Tab: saveSessionToStorage({ address, btcAddress, publicKey }, ttl = 10m)
+        Note over Tab: Seed phrase is NEVER written to sessionStorage
         Store->>Store: Set autoLockTimeoutId = setTimeout(10m)
         Store->>Store: Set vaultState = 'UNLOCKED', activeAddress, decryptedMnemonic
         Store-->>UI: Vault unlocked
@@ -148,7 +149,7 @@ sequenceDiagram
 
     Store->>Tab: getSessionFromStorage()
     alt Session exists and Date.now() < expiresAt
-        Tab-->>Store: Returns cached { mnemonic, address, btcAddress, expiresAt }
+        Tab-->>Store: Returns cached { address, btcAddress, publicKey, expiresAt }
         Store->>Store: Set vaultState = 'UNLOCKED'
         Store->>Store: Schedule new autoLockTimeoutId for remaining time
         Page-->>User: Seamlessly renders Dashboard (No password prompt)

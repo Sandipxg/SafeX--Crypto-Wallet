@@ -28,7 +28,6 @@ const AUTO_LOCK_MS = 10 * 60 * 1000
 const SESSION_STORAGE_KEY = 'safex_ephemeral_vault_session'
 
 interface EphemeralSessionPayload {
-  mnemonic: string
   address: `0x${string}`
   btcAddress: string
   publicKey: `0x${string}`
@@ -130,7 +129,7 @@ export const useVaultStore = create<VaultStoreState>((set, get) => ({
         set({
           hasVaultInStorage: true,
           vaultState: 'UNLOCKED',
-          decryptedMnemonic: session.mnemonic,
+          decryptedMnemonic: null,
           activeAddress: session.address,
           activeBtcAddress: session.btcAddress,
           activePublicKey: session.publicKey,
@@ -164,8 +163,8 @@ export const useVaultStore = create<VaultStoreState>((set, get) => ({
     const currentTimer = get().autoLockTimeoutId
     if (currentTimer) clearTimeout(currentTimer)
 
-    // Save session to tab storage
-    saveSessionToStorage({ mnemonic, address, btcAddress, publicKey })
+    // Save non-sensitive public session to tab storage (never store raw mnemonic)
+    saveSessionToStorage({ address, btcAddress, publicKey })
 
     const timer = setTimeout(() => {
       get().lock()
@@ -192,7 +191,7 @@ export const useVaultStore = create<VaultStoreState>((set, get) => ({
     if (currentTimer) clearTimeout(currentTimer)
 
     if (mnemonic) {
-      saveSessionToStorage({ mnemonic, address, btcAddress, publicKey })
+      saveSessionToStorage({ address, btcAddress, publicKey })
     } else {
       clearSessionFromStorage()
     }
